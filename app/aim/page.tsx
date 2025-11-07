@@ -60,17 +60,101 @@ export default function AimPage() {
     const incomplete: Array<{ name: string; blockType: number; displayName?: string; credits?: number }> = [];
     const electiveNumbers = new Set<number>(); // Lưu số của các môn tự chọn chưa hoàn thành
     
+    // Tính tổng tín chỉ từ minNumberCredit của tất cả blocks (không bị loại trừ)
+    // Tính passedCredits từ passedCredits của tất cả blocks (không bị loại trừ)
+    const calculateCreditsFromBlocks = (blocks: EducationBlock[], isTopLevel: boolean = true) => {
+      let totalCredits = 0;
+      let passedCredits = 0;
+      
+      blocks.forEach((block) => {
+        if (isExcludedBlock(block)) {
+          return; // Bỏ qua block bị loại trừ (chuẩn đầu ra, quốc phòng, thể chất)
+        }
+        
+        const hasChildren = block.children && block.children.length > 0;
+        const isLeafBlock = !hasChildren;
+        
+        // totalCredits: CHỈ tính từ leaf blocks (blocks không có children) để tránh double counting
+        // Tính từ listProgramSubject để đảm bảo chính xác
+        if (isLeafBlock) {
+          if (block.blockType === 2) {
+            // Block tự chọn: chỉ tính minNumberCredit
+            const electiveCredits = block.minNumberCredit !== null && block.minNumberCredit !== undefined && block.minNumberCredit > 0
+              ? block.minNumberCredit
+              : 3; // Mặc định 3 tín chỉ nếu không có minNumberCredit
+            totalCredits += electiveCredits;
+          } else {
+            // Block khác: tính từ listProgramSubject (bỏ qua các môn bị loại trừ)
+            if (block.listProgramSubject && block.listProgramSubject.length > 0) {
+              block.listProgramSubject.forEach((subject) => {
+                if (!isExcludedSubject(subject)) {
+                  const subjectCredits = subject.subject?.numberOfCredit || 0;
+                  if (subjectCredits > 0) {
+                    totalCredits += subjectCredits;
+                  }
+                }
+              });
+            } else {
+              // Nếu không có listProgramSubject, dùng minNumberCredit/totalCredit
+              const blockCredits = block.minNumberCredit !== null && block.minNumberCredit !== undefined && block.minNumberCredit > 0
+                ? block.minNumberCredit
+                : (block.totalCredit !== null && block.totalCredit !== undefined && block.totalCredit > 0
+                  ? block.totalCredit
+                  : 0);
+              if (blockCredits > 0) {
+                totalCredits += blockCredits;
+              }
+            }
+          }
+        }
+        
+        // passedCredits: CHỈ tính từ top-level blocks (có hoặc không có children)
+        // Vì passedCredits của parent = tổng passedCredits của children
+        if (isTopLevel) {
+          let blockPassedCredits = block.passedCredits || 0;
+          // Nếu có children, trừ đi passedCredits của children bị loại trừ
+          if (hasChildren) {
+            block.children.forEach((child) => {
+              if (isExcludedBlock(child)) {
+                blockPassedCredits -= (child.passedCredits || 0);
+              }
+            });
+          }
+          passedCredits += Math.max(0, blockPassedCredits);
+        }
+        
+        // Duyệt children để tính leaf blocks (chỉ tính totalCredits)
+        if (hasChildren) {
+          const childCredits = calculateCreditsFromBlocks(block.children, false);
+          totalCredits += childCredits.totalCredits;
+          // KHÔNG cộng passedCredits từ children vì đã tính từ top-level parent
+        }
+      });
+      
+      return { totalCredits, passedCredits };
+    };
+    
     // Tính GPA: sử dụng cùng dữ liệu từ store như trang /grade
     // Không cần chuyển đổi từ listStudentSubjectMark nữa
 
     // Hàm kiểm tra xem block/môn có phải là các môn cần loại trừ không
-    // CHỈ loại trừ: môn học điều kiện và chuẩn đầu ra
-    // VẪN TÍNH: quốc phòng an ninh và thể chất
+    // Loại trừ: chuẩn đầu ra, quốc phòng an ninh, và thể chất
+    // KHÔNG loại trừ: môn học điều kiện (tính vào tổng tín chỉ)
     const isExcludedBlock = (block: EducationBlock): boolean => {
       const displayName = block.displayName?.toLowerCase() || '';
-      return displayName.includes('môn học điều kiện') ||
-             displayName.includes('điều kiện') ||
-             displayName.includes('chuẩn đầu ra');
+      // Kiểm tra cả blockName nếu có (một số block có blockName thay vì displayName)
+      const blockName = (block as any).blockName?.toLowerCase() || '';
+      const combinedName = `${displayName} ${blockName}`;
+      
+      // Kiểm tra các từ khóa để loại trừ block quốc phòng và thể chất
+      const isNationalDefenseBlock = combinedName.includes('giáo dục quốc phòng') ||
+                                      combinedName.includes('quốc phòng an ninh') ||
+                                      combinedName.includes('quốc phòng');
+      const isPhysicalEducationBlock = combinedName.includes('giáo dục thể chất') ||
+                                       combinedName.includes('thể chất');
+      const isConditionalOutputBlock = combinedName.includes('chuẩn đầu ra');
+      
+      return isConditionalOutputBlock || isNationalDefenseBlock || isPhysicalEducationBlock;
     };
 
     // Hàm kiểm tra môn quốc phòng an ninh
@@ -85,63 +169,50 @@ export default function AimPage() {
              subjectName.includes('chiến đấu');
     };
 
+    // Hàm kiểm tra môn thể chất
+    const isPhysicalEducationSubject = (subject: ProgramSubject): boolean => {
+      const subjectCode = subject.subject?.subjectCode?.toUpperCase() || '';
+      const subjectName = subject.displaySubjectName?.toLowerCase() || 
+                         subject.subject?.subjectName?.toLowerCase() || '';
+      return subjectCode.startsWith('TDTC') ||
+             subjectCode.startsWith('TATC') && subjectName.includes('thể chất') ||
+             subjectName.includes('thể chất') ||
+             subjectName.includes('giáo dục thể chất') ||
+             subjectName.includes('physical education');
+    };
+
     const isExcludedSubject = (subject: ProgramSubject): boolean => {
       const subjectCode = subject.subject?.subjectCode?.toUpperCase() || '';
       const subjectName = subject.displaySubjectName?.toLowerCase() || 
                          subject.subject?.subjectName?.toLowerCase() || '';
-      // CHỈ loại trừ môn học điều kiện và chuẩn đầu ra
-      // VẪN TÍNH quốc phòng an ninh và thể chất
-      if (subjectCode.startsWith('TATC') ||
-          subjectCode.startsWith('CDR') ||
+      // Loại trừ: chuẩn đầu ra, quốc phòng an ninh, và thể chất
+      // KHÔNG loại trừ: môn học điều kiện (TATC không phải thể chất)
+      if (subjectCode.startsWith('CDR') ||
           subjectCode.startsWith('OTCDR') ||
-          subjectName.includes('điều kiện') ||
           subjectName.includes('chuẩn đầu ra') ||
           subjectName.includes('ôn thi chuẩn đầu ra')) {
+        return true;
+      }
+      // Loại trừ quốc phòng an ninh
+      if (isNationalDefenseSubject(subject)) {
+        return true;
+      }
+      // Loại trừ thể chất
+      if (isPhysicalEducationSubject(subject)) {
         return true;
       }
       return false;
     };
 
     const traverseBlock = (block: EducationBlock, isTopLevel: boolean = false) => {
-      // Bỏ qua block môn học điều kiện và chuẩn đầu ra
+      // Bỏ qua block chuẩn đầu ra, quốc phòng, và thể chất
+      // KHÔNG bỏ qua môn học điều kiện
       if (isExcludedBlock(block)) {
         return;
       }
 
-      // Tính tín chỉ: CHỈ tính từ các leaf blocks (blocks không có children)
-      // để tránh double-counting vì parent blocks có thể tổng hợp từ children
-      const isLeafBlock = !block.children || block.children.length === 0;
-      
-      if (isLeafBlock) {
-        // Tính từ minNumberCredit hoặc totalCredit của leaf blocks
-        // Ưu tiên minNumberCredit nếu có, nếu không thì dùng totalCredit
-        const credits = block.minNumberCredit !== null && block.minNumberCredit !== undefined && block.minNumberCredit > 0
-          ? block.minNumberCredit
-          : (block.totalCredit !== null && block.totalCredit !== undefined && block.totalCredit > 0
-            ? block.totalCredit
-            : 0);
-        
-        if (credits > 0) {
-          total += credits;
-        }
-        // KHÔNG tính passedCredits từ leaf blocks vì sẽ bị trùng với top-level
-      } else if (isTopLevel) {
-        // CHỈ tính passedCredits từ top-level blocks (có children)
-        // vì passedCredits ở đây đã tổng hợp từ tất cả children
-        // NHƯNG cần trừ đi passedCredits của các blocks bị loại trừ (môn học điều kiện, chuẩn đầu ra)
-        let blockPassedCredits = block.passedCredits || 0;
-        
-        // Nếu block này có children, cần trừ đi passedCredits của các children bị loại trừ
-        if (block.children && block.children.length > 0) {
-          block.children.forEach((child) => {
-            if (isExcludedBlock(child)) {
-              blockPassedCredits -= (child.passedCredits || 0);
-            }
-          });
-        }
-        
-        passed += Math.max(0, blockPassedCredits); // Đảm bảo không âm
-      }
+      // passedCredits đã được tính trong calculateCreditsFromBlocks
+      // Không cần tính lại ở đây
 
       // Kiểm tra block chưa hoàn thành
       if (!block.isComplete) {
@@ -172,22 +243,16 @@ export default function AimPage() {
           // Kiểm tra các môn học chưa hoàn thành từ listProgramSubject
           if (block.listProgramSubject && block.listProgramSubject.length > 0) {
             block.listProgramSubject.forEach((subject) => {
-              // Bỏ qua môn học điều kiện và chuẩn đầu ra
+              // Bỏ qua môn học điều kiện, chuẩn đầu ra, quốc phòng, và thể chất
               if (isExcludedSubject(subject)) {
                 return;
               }
 
-              // Bỏ qua môn quốc phòng trong danh sách chưa hoàn thành (coi như đã xong)
-              if (isNationalDefenseSubject(subject)) {
-                return;
-              }
-
               // Môn chưa hoàn thành nếu:
-              // - hasMark: true nhưng result: null hoặc result: 0
-              // - hoặc hasMark: false
-              const isIncomplete = 
-                (subject.hasMark === true && (subject.result === null || subject.result === 0)) ||
-                (subject.hasMark === false);
+              // - result !== 1 (chưa pass hoặc chưa có điểm)
+              // LƯU Ý: result: 1 nghĩa là đã pass, KHÔNG tính vào incomplete
+              // result: null, 0, hoặc undefined nghĩa là chưa pass
+              const isIncomplete = subject.result !== 1;
 
               if (isIncomplete && subject.displaySubjectName) {
                 incomplete.push({
@@ -208,30 +273,14 @@ export default function AimPage() {
       }
     };
 
+    // Tính tổng tín chỉ và passedCredits từ blocks
+    // Chỉ tính từ leaf blocks để tránh double counting
+    const creditsResult = calculateCreditsFromBlocks(educationProgram, true);
+    total = creditsResult.totalCredits;
+    passed = creditsResult.passedCredits;
+    
+    // Duyệt blocks để tính môn chưa hoàn thành
     educationProgram.forEach(block => traverseBlock(block, true));
-
-    // Cộng thêm passedCredits của quốc phòng (coi như đã xong dù chưa xong)
-    const addNationalDefenseCredits = (blocks: EducationBlock[]) => {
-      blocks.forEach((block) => {
-        const displayName = block.displayName?.toLowerCase() || '';
-        if (displayName.includes('quốc phòng') || displayName.includes('an ninh')) {
-          // Nếu block quốc phòng có passedCredits, cộng vào
-          // Nếu chưa có, cộng minNumberCredit hoặc totalCredit
-          const defenseCredits = block.passedCredits > 0 
-            ? block.passedCredits 
-            : ((block.minNumberCredit !== null && block.minNumberCredit !== undefined && block.minNumberCredit > 0)
-              ? block.minNumberCredit 
-              : (block.totalCredit || 0));
-          if (defenseCredits > 0) {
-            passed += defenseCredits;
-          }
-        }
-        if (block.children && block.children.length > 0) {
-          addNationalDefenseCredits(block.children);
-        }
-      });
-    };
-    addNationalDefenseCredits(educationProgram);
 
     // Thêm môn tự chọn vào danh sách nếu có
     // Cần tìm minNumberCredit của các block tự chọn chưa hoàn thành
@@ -281,10 +330,12 @@ export default function AimPage() {
       const totalIncompleteCredits = incomplete.reduce((sum, subj) => sum + (subj.credits || 0), 0);
       
       if (totalIncompleteCredits > 0) {
-        // Tổng điểm cần có = targetGpa * (tổng tín chỉ đã học + tổng tín chỉ chưa học)
+        // GPA chỉ tính từ các môn được tính vào GPA (không tính môn học điều kiện)
+        // Vậy tất cả tính toán phải dựa trên passedCreditsForGpa, không phải passed
+        // Tổng điểm cần có = targetGpa * (tổng tín chỉ đã học được tính vào GPA + tổng tín chỉ chưa học)
         const totalNeededPoints = target * (passedCreditsForGpa + totalIncompleteCredits);
         
-        // Điểm đã có = GPA hiện tại * số tín chỉ đã học
+        // Điểm đã có = GPA hiện tại * số tín chỉ đã học được tính vào GPA
         const currentPoints = calculatedGpa * passedCreditsForGpa;
         
         // Tính GPA tối đa có thể đạt được (nếu tất cả môn còn lại đều đạt A - 4.0)
@@ -308,8 +359,8 @@ export default function AimPage() {
           aimResult = {
             targetGpa: target,
             currentGpa: calculatedGpa,
-            currentCredits: passedCreditsForGpa,
-            remainingCredits: totalIncompleteCredits,
+            currentCredits: passed, // Hiển thị passed từ educationProgram để đồng bộ với phần đầu
+            remainingCredits: total - passed, // Tín chỉ còn lại = tổng - đã học
             requiredAverage: requiredAverage,
             minLetterGrade: minLetterGrade.grade,
             minLetterGradeMark4: minLetterGrade.mark4,
@@ -652,8 +703,8 @@ export default function AimPage() {
         aimResult = {
           targetGpa: target,
           currentGpa: calculatedGpa,
-          currentCredits: passedCreditsForGpa,
-          remainingCredits: totalIncompleteCredits,
+          currentCredits: passed, // Hiển thị passed từ educationProgram để đồng bộ với phần đầu
+          remainingCredits: total - passed, // Tín chỉ còn lại = tổng - đã học
           requiredAverage: requiredAverage,
           minLetterGrade: minLetterGrade.grade,
           minLetterGradeMark4: minLetterGrade.mark4,
@@ -670,8 +721,8 @@ export default function AimPage() {
         aimResult = {
           targetGpa: target,
           currentGpa: calculatedGpa,
-          currentCredits: passedCreditsForGpa,
-          remainingCredits: 0,
+          currentCredits: passed, // Hiển thị passed từ educationProgram để đồng bộ với phần đầu
+          remainingCredits: total - passed, // Tín chỉ còn lại = tổng - đã học
           requiredAverage: 0,
           minLetterGrade: '-',
           minLetterGradeMark4: 0,
@@ -684,12 +735,13 @@ export default function AimPage() {
       }
     }
 
-    // Tính tổng tín chỉ từ subjectMarks (để đồng nhất với phần tính aim)
-    const totalCreditsFromMarks = passedCreditsForGpa + incomplete.reduce((sum, subj) => sum + (subj.credits || 0), 0);
+    // Tính tổng tín chỉ từ blocks (bao gồm cả môn học điều kiện)
+    // total đã được tính từ calculateTotalCreditsFromSubjects
+    // passed đã được tính từ traverseBlock
     
     return { 
-      totalCredits: totalCreditsFromMarks, // Sử dụng tổng từ subjectMarks + incomplete
-      passedCredits: passedCreditsForGpa, // Sử dụng từ subjectMarks (đồng nhất với phần tính aim)
+      totalCredits: total, // Sử dụng tổng từ blocks (bao gồm môn học điều kiện)
+      passedCredits: passed, // Sử dụng từ blocks (bao gồm môn học điều kiện)
       incompleteSubjects: incomplete,
       gpa: calculatedGpa,
       aimCalculation: aimResult
@@ -710,7 +762,7 @@ export default function AimPage() {
         <div className="w-full border-b border-zinc-200 bg-white px-8 py-6 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-semibold text-black dark:text-zinc-50">
-              Mức độ hoàn thành chương trình học
+              Đặt mục tiêu GPA
             </h1>
             <button
               onClick={() => router.push('/')}
