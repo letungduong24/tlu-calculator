@@ -47,6 +47,48 @@ export default function AimPage() {
 
   // Tính tổng tín chỉ và tín chỉ đã học
   const { totalCredits, passedCredits, incompleteSubjects, gpa, aimCalculation } = useMemo(() => {
+    // LOG: Kiểm tra Tiếng Anh tăng cường trong subjectMarks
+    console.log('=== KIỂM TRA TIẾNG ANH TĂNG CƯỜNG ===');
+    const tiengAnhTangCuong = subjectMarks.filter(mark => 
+      mark.subjectName?.toLowerCase().includes('tiếng anh tăng cường') ||
+      mark.subjectName?.toLowerCase().includes('tieng anh tang cuong') ||
+      mark.subjectName?.toLowerCase().includes('tăng cường') ||
+      mark.subjectCode?.toUpperCase().includes('TATC')
+    );
+    
+    console.log('--- Tìm thấy Tiếng Anh tăng cường trong subjectMarks ---', {
+      count: tiengAnhTangCuong.length,
+      details: tiengAnhTangCuong.map(mark => ({
+        subjectName: mark.subjectName,
+        subjectCode: mark.subjectCode,
+        credits: mark.credits,
+        mark4: mark.mark4,
+        letterGrade: mark.letterGrade,
+        totalMark: mark.totalMark,
+        isCounted: mark.isCounted,
+        result: mark.result,
+        shouldCountInGPA: shouldCountInGPA(mark),
+        reason: !shouldCountInGPA(mark) ? 
+          (mark.isCounted === false ? 'isCounted = false (môn học điều kiện)' :
+           (mark.result !== undefined && mark.result !== null && mark.result !== 1) ? `result = ${mark.result} (không pass)` :
+           (mark.letterGrade === 'F' || mark.letterGrade === 'f') ? 'letterGrade = F' :
+           (!mark.mark4 && !mark.totalMark) ? 'Không có điểm hợp lệ' :
+           (!mark.credits || mark.credits <= 0) ? 'Không có tín chỉ' :
+           'Không rõ') : 'Được tính vào GPA'
+      }))
+    });
+    
+    // LOG: Tất cả subjectMarks để kiểm tra
+    console.log('--- Tất cả subjectMarks ---', {
+      total: subjectMarks.length,
+      subjects: subjectMarks.map(mark => ({
+        subjectName: mark.subjectName,
+        subjectCode: mark.subjectCode,
+        isCounted: mark.isCounted,
+        shouldCountInGPA: shouldCountInGPA(mark)
+      }))
+    });
+    
     // Tính GPA từ subjectMarks trong store (giống trang /grade)
     const calculatedGpa = calculateGPA(subjectMarks);
     
@@ -138,8 +180,7 @@ export default function AimPage() {
     // Không cần chuyển đổi từ listStudentSubjectMark nữa
 
     // Hàm kiểm tra xem block/môn có phải là các môn cần loại trừ không
-    // Loại trừ: chuẩn đầu ra, quốc phòng an ninh, và thể chất
-    // KHÔNG loại trừ: môn học điều kiện (tính vào tổng tín chỉ)
+    // Loại trừ: chuẩn đầu ra, quốc phòng an ninh, thể chất, và môn học điều kiện
     const isExcludedBlock = (block: EducationBlock): boolean => {
       const displayName = block.displayName?.toLowerCase() || '';
       // Kiểm tra cả blockName nếu có (một số block có blockName thay vì displayName)
@@ -153,8 +194,9 @@ export default function AimPage() {
       const isPhysicalEducationBlock = combinedName.includes('giáo dục thể chất') ||
                                        combinedName.includes('thể chất');
       const isConditionalOutputBlock = combinedName.includes('chuẩn đầu ra');
+      const isConditionalSubjectBlock = combinedName.includes('môn học điều kiện');
       
-      return isConditionalOutputBlock || isNationalDefenseBlock || isPhysicalEducationBlock;
+      return isConditionalOutputBlock || isNationalDefenseBlock || isPhysicalEducationBlock || isConditionalSubjectBlock;
     };
 
     // Hàm kiểm tra môn quốc phòng an ninh
@@ -185,8 +227,7 @@ export default function AimPage() {
       const subjectCode = subject.subject?.subjectCode?.toUpperCase() || '';
       const subjectName = subject.displaySubjectName?.toLowerCase() || 
                          subject.subject?.subjectName?.toLowerCase() || '';
-      // Loại trừ: chuẩn đầu ra, quốc phòng an ninh, và thể chất
-      // KHÔNG loại trừ: môn học điều kiện (TATC không phải thể chất)
+      // Loại trừ: chuẩn đầu ra, quốc phòng an ninh, thể chất, và môn học điều kiện
       if (subjectCode.startsWith('CDR') ||
           subjectCode.startsWith('OTCDR') ||
           subjectName.includes('chuẩn đầu ra') ||
@@ -201,12 +242,18 @@ export default function AimPage() {
       if (isPhysicalEducationSubject(subject)) {
         return true;
       }
+      // Loại trừ môn học điều kiện (TATC - Tiếng Anh tăng cường)
+      if (subjectCode.startsWith('TATC') ||
+          subjectName.includes('tiếng anh tăng cường') ||
+          subjectName.includes('tieng anh tang cuong') ||
+          subjectName.includes('tăng cường')) {
+        return true;
+      }
       return false;
     };
 
     const traverseBlock = (block: EducationBlock, isTopLevel: boolean = false) => {
-      // Bỏ qua block chuẩn đầu ra, quốc phòng, và thể chất
-      // KHÔNG bỏ qua môn học điều kiện
+      // Bỏ qua block chuẩn đầu ra, quốc phòng, thể chất, và môn học điều kiện
       if (isExcludedBlock(block)) {
         return;
       }
@@ -243,7 +290,7 @@ export default function AimPage() {
           // Kiểm tra các môn học chưa hoàn thành từ listProgramSubject
           if (block.listProgramSubject && block.listProgramSubject.length > 0) {
             block.listProgramSubject.forEach((subject) => {
-              // Bỏ qua môn học điều kiện, chuẩn đầu ra, quốc phòng, và thể chất
+              // Bỏ qua chuẩn đầu ra, quốc phòng, thể chất, và môn học điều kiện
               if (isExcludedSubject(subject)) {
                 return;
               }
@@ -283,34 +330,52 @@ export default function AimPage() {
     educationProgram.forEach(block => traverseBlock(block, true));
 
     // Thêm môn tự chọn vào danh sách nếu có
-    // Cần tìm minNumberCredit của các block tự chọn chưa hoàn thành
+    // Tìm từng block tự chọn chưa hoàn thành và thêm riêng biệt
     if (electiveNumbers.size > 0) {
       const sortedNumbers = Array.from(electiveNumbers).sort((a, b) => a - b);
-      // Tìm minNumberCredit của block tự chọn đầu tiên để hiển thị
-      let electiveCredits = 0;
-      const findElectiveBlock = (blocks: EducationBlock[]) => {
+      
+      // Tìm từng block tự chọn chưa hoàn thành và thêm riêng biệt
+      const findElectiveBlocks = (blocks: EducationBlock[], foundBlocks: Array<{ name: string; credits: number; number: number }> = []) => {
         for (const block of blocks) {
           if (block.blockType === 2 && !block.isComplete) {
             const match = block.displayName?.match(/(\d+)/);
-            if (match && sortedNumbers.includes(parseInt(match[1], 10))) {
-              if (block.minNumberCredit && block.minNumberCredit > 0) {
-                electiveCredits = block.minNumberCredit;
-                return;
+            if (match) {
+              const electiveNumber = parseInt(match[1], 10);
+              if (sortedNumbers.includes(electiveNumber)) {
+                // Kiểm tra xem đã thêm block này chưa (tránh trùng lặp)
+                const alreadyAdded = foundBlocks.some(b => b.number === electiveNumber);
+                if (!alreadyAdded) {
+                  const electiveCredits = block.minNumberCredit && block.minNumberCredit > 0
+                    ? block.minNumberCredit
+                    : 3; // Mặc định 3 nếu không có minNumberCredit
+                  
+                  foundBlocks.push({
+                    name: block.displayName || `Tự chọn ngành ${electiveNumber}`,
+                    credits: electiveCredits,
+                    number: electiveNumber
+                  });
+                }
               }
             }
           }
           if (block.children && block.children.length > 0) {
-            findElectiveBlock(block.children);
+            findElectiveBlocks(block.children, foundBlocks);
           }
         }
+        return foundBlocks;
       };
-      findElectiveBlock(educationProgram);
       
-      incomplete.push({
-        name: `Tự chọn ${sortedNumbers.join('/')}`,
-        blockType: 2,
-        displayName: 'Môn tự chọn',
-        credits: electiveCredits || 3, // Mặc định 3 nếu không tìm thấy
+      const foundElectiveBlocks = findElectiveBlocks(educationProgram);
+      
+      // Sắp xếp theo số và thêm vào incomplete
+      foundElectiveBlocks.sort((a, b) => a.number - b.number);
+      foundElectiveBlocks.forEach(electiveBlock => {
+        incomplete.push({
+          name: electiveBlock.name,
+          blockType: 2,
+          displayName: electiveBlock.name,
+          credits: electiveBlock.credits,
+        });
       });
     }
 
@@ -354,6 +419,46 @@ export default function AimPage() {
         // Quy đổi sang điểm chữ tối thiểu
         const minLetterGrade = getLetterGrade(requiredAverage);
         
+        // LOG: Tính toán ban đầu
+        console.log('=== TÍNH TOÁN BAN ĐẦU ===', {
+          targetGpa: target,
+          currentGpa: calculatedGpa,
+          passedCreditsForGpa: passedCreditsForGpa,
+          totalIncompleteCredits: totalIncompleteCredits,
+          totalNeededPoints: {
+            formula: `target * (passedCreditsForGpa + totalIncompleteCredits)`,
+            calculation: `${target} * (${passedCreditsForGpa} + ${totalIncompleteCredits})`,
+            result: totalNeededPoints
+          },
+          currentPoints: {
+            formula: `calculatedGpa * passedCreditsForGpa`,
+            calculation: `${calculatedGpa} * ${passedCreditsForGpa}`,
+            result: currentPoints
+          },
+          maxPossiblePoints: {
+            formula: `currentPoints + (4.0 * totalIncompleteCredits)`,
+            calculation: `${currentPoints} + (4.0 * ${totalIncompleteCredits})`,
+            result: maxPossiblePoints
+          },
+          maxPossibleGpa: {
+            formula: `maxPossiblePoints / (passedCreditsForGpa + totalIncompleteCredits)`,
+            calculation: `${maxPossiblePoints} / (${passedCreditsForGpa} + ${totalIncompleteCredits})`,
+            result: maxPossibleGpa
+          },
+          isAchievable: isAchievable,
+          remainingPoints: {
+            formula: `totalNeededPoints - currentPoints`,
+            calculation: `${totalNeededPoints} - ${currentPoints}`,
+            result: remainingPoints
+          },
+          requiredAverage: {
+            formula: `remainingPoints / totalIncompleteCredits`,
+            calculation: `${remainingPoints} / ${totalIncompleteCredits}`,
+            result: requiredAverage
+          },
+          minLetterGrade: minLetterGrade
+        });
+        
         // Nếu không thể đạt được, chỉ trả về thông tin và không tính chiến lược
         if (!isAchievable) {
           aimResult = {
@@ -382,6 +487,22 @@ export default function AimPage() {
           // Chiến lược 1: Tất cả đều B
           const ifAllBPoints = currentPoints + (3.0 * totalIncompleteCredits);
           const ifAllBGpa = ifAllBPoints / (passedCreditsForGpa + totalIncompleteCredits);
+          
+          console.log('=== CHIẾN LƯỢC 1: TẤT CẢ ĐỀU B ===', {
+            ifAllBPoints: {
+              formula: `currentPoints + (3.0 * totalIncompleteCredits)`,
+              calculation: `${currentPoints} + (3.0 * ${totalIncompleteCredits})`,
+              result: ifAllBPoints
+            },
+            ifAllBGpa: {
+              formula: `ifAllBPoints / (passedCreditsForGpa + totalIncompleteCredits)`,
+              calculation: `${ifAllBPoints} / (${passedCreditsForGpa} + ${totalIncompleteCredits})`,
+              result: ifAllBGpa
+            },
+            target: target,
+            meetsTarget: ifAllBGpa >= target
+          });
+          
           if (ifAllBGpa >= target) {
             strategies.push({
               description: `Tất cả môn còn lại đều đạt B (3.0)`,
@@ -399,6 +520,25 @@ export default function AimPage() {
         // Chiến lược 2: Tất cả đều điểm chữ tối thiểu (chỉ thêm nếu không phải A hoặc B)
         const ifAllMinGradePoints = currentPoints + (minLetterGrade.mark4 * totalIncompleteCredits);
         const ifAllMinGradeGpa = ifAllMinGradePoints / (passedCreditsForGpa + totalIncompleteCredits);
+        
+        console.log('=== CHIẾN LƯỢC 2: TẤT CẢ ĐỀU ĐIỂM CHỮ TỐI THIỂU ===', {
+          minLetterGrade: minLetterGrade.grade,
+          minLetterGradeMark4: minLetterGrade.mark4,
+          ifAllMinGradePoints: {
+            formula: `currentPoints + (minLetterGrade.mark4 * totalIncompleteCredits)`,
+            calculation: `${currentPoints} + (${minLetterGrade.mark4} * ${totalIncompleteCredits})`,
+            result: ifAllMinGradePoints
+          },
+          ifAllMinGradeGpa: {
+            formula: `ifAllMinGradePoints / (passedCreditsForGpa + totalIncompleteCredits)`,
+            calculation: `${ifAllMinGradePoints} / (${passedCreditsForGpa} + ${totalIncompleteCredits})`,
+            result: ifAllMinGradeGpa
+          },
+          target: target,
+          meetsTarget: ifAllMinGradeGpa >= target,
+          shouldAdd: ifAllMinGradeGpa >= target && minLetterGrade.grade !== 'A' && minLetterGrade.grade !== 'B'
+        });
+        
         if (ifAllMinGradeGpa >= target && minLetterGrade.grade !== 'A' && minLetterGrade.grade !== 'B') {
           strategies.push({
             description: `Tất cả môn còn lại đều đạt ${minLetterGrade.grade}`,
@@ -447,6 +587,13 @@ export default function AimPage() {
             // Tính điểm dựa trên số tín chỉ thực tế từ response
             let strategyPoints = currentPoints;
             let totalCreditsUsed = 0;
+            const subjectCalculations: Array<{
+              name: string;
+              credits: number;
+              grade: string;
+              mark4: number;
+              pointsAdded: number;
+            }> = [];
             
             // Sắp xếp môn theo số tín chỉ (từ cao xuống thấp) để tối ưu
             const sortedSubjects = [...validSubjects].sort((a, b) => (b.credits || 0) - (a.credits || 0));
@@ -455,17 +602,50 @@ export default function AimPage() {
               const credits = sortedSubjects[i].credits || 0;
               if (credits <= 0) continue; // Bỏ qua môn không có tín chỉ
               
+              const grade = i < numA ? 'A' : 'B';
+              const mark4 = gradeValues[grade];
+              const pointsAdded = mark4 * credits;
+              
               if (i < numA) {
                 strategyPoints += gradeValues['A'] * credits;
               } else {
                 strategyPoints += gradeValues['B'] * credits;
               }
               totalCreditsUsed += credits;
+              
+              subjectCalculations.push({
+                name: sortedSubjects[i].name,
+                credits: credits,
+                grade: grade,
+                mark4: mark4,
+                pointsAdded: pointsAdded
+              });
             }
             
             if (totalCreditsUsed === 0) continue; // Bỏ qua nếu không có tín chỉ hợp lệ
             
             const strategyGpa = strategyPoints / (passedCreditsForGpa + totalCreditsUsed);
+            
+            console.log(`=== CHIẾN LƯỢC: ${numA} môn A + ${numB} môn B ===`, {
+              numA: numA,
+              numB: numB,
+              initialPoints: currentPoints,
+              subjectCalculations: subjectCalculations,
+              totalPointsAdded: subjectCalculations.reduce((sum, s) => sum + s.pointsAdded, 0),
+              strategyPoints: {
+                formula: `currentPoints + sum(pointsAdded)`,
+                calculation: `${currentPoints} + ${subjectCalculations.reduce((sum, s) => sum + s.pointsAdded, 0)}`,
+                result: strategyPoints
+              },
+              totalCreditsUsed: totalCreditsUsed,
+              strategyGpa: {
+                formula: `strategyPoints / (passedCreditsForGpa + totalCreditsUsed)`,
+                calculation: `${strategyPoints} / (${passedCreditsForGpa} + ${totalCreditsUsed})`,
+                result: strategyGpa
+              },
+              target: target,
+              meetsTarget: strategyGpa >= target
+            });
             
           // Chỉ thêm chiến lược nếu đạt hoặc vượt mục tiêu
           if (strategyGpa >= target) {
@@ -498,6 +678,22 @@ export default function AimPage() {
         if (validNumSubjects > 0) {
           const ifAllAPoints = currentPoints + (4.0 * totalIncompleteCredits);
           const ifAllAGpa = ifAllAPoints / (passedCreditsForGpa + totalIncompleteCredits);
+          
+          console.log('=== CHIẾN LƯỢC: TẤT CẢ ĐỀU A ===', {
+            ifAllAPoints: {
+              formula: `currentPoints + (4.0 * totalIncompleteCredits)`,
+              calculation: `${currentPoints} + (4.0 * ${totalIncompleteCredits})`,
+              result: ifAllAPoints
+            },
+            ifAllAGpa: {
+              formula: `ifAllAPoints / (passedCreditsForGpa + totalIncompleteCredits)`,
+              calculation: `${ifAllAPoints} / (${passedCreditsForGpa} + ${totalIncompleteCredits})`,
+              result: ifAllAGpa
+            },
+            target: target,
+            meetsTarget: ifAllAGpa >= target
+          });
+          
           if (ifAllAGpa >= target) {
             strategies.push({
               description: `Tất cả môn còn lại đều đạt A`,
@@ -524,25 +720,71 @@ export default function AimPage() {
               // Tính điểm dựa trên số tín chỉ thực tế từ response
               let strategyPoints = currentPoints;
               let totalCreditsUsed = 0;
+              const subjectCalculations: Array<{
+                name: string;
+                credits: number;
+                grade: string;
+                mark4: number;
+                pointsAdded: number;
+              }> = [];
               const sortedSubjects = [...validSubjects].sort((a, b) => (b.credits || 0) - (a.credits || 0));
               
               for (let i = 0; i < sortedSubjects.length; i++) {
                 const credits = sortedSubjects[i].credits || 0;
                 if (credits <= 0) continue; // Bỏ qua môn không có tín chỉ
                 
+                let grade: string;
+                let mark4: number;
                 if (i < numA) {
+                  grade = 'A';
+                  mark4 = gradeValues['A'];
                   strategyPoints += gradeValues['A'] * credits;
                 } else if (i < numA + numB) {
+                  grade = 'B';
+                  mark4 = gradeValues['B'];
                   strategyPoints += gradeValues['B'] * credits;
                 } else {
+                  grade = 'C';
+                  mark4 = gradeValues['C'];
                   strategyPoints += gradeValues['C'] * credits;
                 }
                 totalCreditsUsed += credits;
+                
+                subjectCalculations.push({
+                  name: sortedSubjects[i].name,
+                  credits: credits,
+                  grade: grade,
+                  mark4: mark4,
+                  pointsAdded: mark4 * credits
+                });
               }
               
               if (totalCreditsUsed === 0) continue; // Bỏ qua nếu không có tín chỉ hợp lệ
               
               const strategyGpa = strategyPoints / (passedCreditsForGpa + totalCreditsUsed);
+              
+              console.log(`=== CHIẾN LƯỢC: ${numA} môn A + ${numB} môn B + ${numC} môn C ===`, {
+                numA: numA,
+                numB: numB,
+                numC: numC,
+                initialPoints: currentPoints,
+                subjectCalculations: subjectCalculations,
+                totalPointsAdded: subjectCalculations.reduce((sum, s) => sum + s.pointsAdded, 0),
+                strategyPoints: {
+                  formula: `currentPoints + sum(pointsAdded)`,
+                  calculation: `${currentPoints} + ${subjectCalculations.reduce((sum, s) => sum + s.pointsAdded, 0)}`,
+                  result: strategyPoints
+                },
+                totalCreditsUsed: totalCreditsUsed,
+                strategyGpa: {
+                  formula: `strategyPoints / (passedCreditsForGpa + totalCreditsUsed)`,
+                  calculation: `${strategyPoints} / (${passedCreditsForGpa} + ${totalCreditsUsed})`,
+                  result: strategyGpa
+                },
+                target: target,
+                meetsTarget: strategyGpa >= target && strategyGpa <= target + 0.1,
+                withinRange: strategyGpa >= target && strategyGpa <= target + 0.1
+              });
               
             if (strategyGpa >= target && strategyGpa <= target + 0.1) {
               const gradeCounts: { [key: string]: number } = {};
@@ -735,13 +977,13 @@ export default function AimPage() {
       }
     }
 
-    // Tính tổng tín chỉ từ blocks (bao gồm cả môn học điều kiện)
+    // Tính tổng tín chỉ từ blocks (không bao gồm môn học điều kiện, quốc phòng, thể chất, chuẩn đầu ra)
     // total đã được tính từ calculateTotalCreditsFromSubjects
     // passed đã được tính từ traverseBlock
     
     return { 
-      totalCredits: total, // Sử dụng tổng từ blocks (bao gồm môn học điều kiện)
-      passedCredits: passed, // Sử dụng từ blocks (bao gồm môn học điều kiện)
+      totalCredits: total, // Sử dụng tổng từ blocks (không bao gồm môn học điều kiện)
+      passedCredits: passed, // Sử dụng từ blocks (không bao gồm môn học điều kiện)
       incompleteSubjects: incomplete,
       gpa: calculatedGpa,
       aimCalculation: aimResult
