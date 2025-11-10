@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { Dayjs } from 'dayjs';
 import { fetchAndProcessSchedule } from '@/lib/services/scheduleService';
 import { saveScheduleToIDB, getScheduleFromIDB } from '@/lib/services/scheduleIdbService';
+import { getErrorMessage } from '@/lib/error-handler';
+import { toast } from 'sonner';
 
 export interface ScheduleItem {
   subjectName: string;
@@ -43,18 +45,19 @@ const useScheduleStore = create<ScheduleState>((set, get) => ({
 
     set({ scheduleLoading: true, scheduleError: null });
     
+    const toastId = toast.loading('Đang tải lịch học...');
+    
     try {
       const scheduleByDate = await fetchAndProcessSchedule();
       // Lưu vào IDB
       await saveScheduleToIDB(scheduleByDate);
       set({ scheduleByDate, scheduleLoading: false, scheduleFetched: true });
+      toast.success('Tải lịch học thành công!', { id: toastId });
     } catch (error) {
       console.error('Error fetching schedule:', error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Không thể tải lịch học. Vui lòng thử lại.';
+      const errorMessage = getErrorMessage(error) || 'Không thể tải lịch học. Vui lòng thử lại.';
       set({ scheduleError: errorMessage, scheduleLoading: false, scheduleFetched: true });
+      toast.error(errorMessage, { id: toastId });
     }
   },
   loadScheduleFromIDB: async () => {

@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import apiClient from '@/lib/axios';
+import { getErrorMessage } from '@/lib/error-handler';
+import { toast } from 'sonner';
 
 interface AuthResponse {
   access_token: string;
@@ -75,17 +77,41 @@ const useAuthStore = create<AuthState>((set) => {
           scope: response.data.scope,
           isAuthenticated: true,
           loading: false,
+          error: null, // Clear error sau khi đăng nhập thành công
         });
-      } catch (error: any) {
-        let errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
-        if (error?.response?.data?.error_description) {
-          errorMessage = error.response.data.error_description;
-        } else if (error?.response?.data?.error) {
-          errorMessage = error.response.data.error;
-        } else if (error instanceof Error) {
-          errorMessage = error.message;
+
+        // Hiển thị toast thành công
+        toast.success('Đăng nhập thành công!');
+
+        // Clear các lỗi trong các store khác sau khi đăng nhập thành công
+        if (typeof window !== 'undefined') {
+          // Import động để tránh circular dependency
+          const { default: useStudentStore } = await import('@/store/studentStore');
+          const { default: useScheduleStore } = await import('@/store/scheduleStore');
+          
+          // Clear errors trong studentStore
+          const studentStore = useStudentStore.getState();
+          if (studentStore.error) {
+            useStudentStore.setState({ error: null });
+          }
+          if (studentStore.marksError) {
+            useStudentStore.setState({ marksError: null });
+          }
+          if (studentStore.educationProgramError) {
+            useStudentStore.setState({ educationProgramError: null });
+          }
+          
+          // Clear errors trong scheduleStore
+          const scheduleStore = useScheduleStore.getState();
+          if (scheduleStore.scheduleError) {
+            useScheduleStore.setState({ scheduleError: null });
+          }
         }
+      } catch (error: any) {
+        const errorMessage = getErrorMessage(error) || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
         set({ error: errorMessage, loading: false });
+        // Hiển thị toast lỗi
+        toast.error(errorMessage);
         throw error;
       }
     },
@@ -108,6 +134,7 @@ const useAuthStore = create<AuthState>((set) => {
         loading: false,
         error: null,
       });
+      toast.info('Đã đăng xuất');
     },
   };
 });

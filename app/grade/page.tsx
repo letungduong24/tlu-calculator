@@ -6,12 +6,18 @@ import useAuthStore from '@/store/authStore';
 import useStudentStore, { SubjectMark } from '@/store/studentStore';
 import { shouldCountInGPA, calculateGPA, calculateGPAByYear } from '@/lib/services/gradeService';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { X, ArrowUpDown, Filter, Search } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Skeleton } from '@/components/ui/skeleton';
-
-type SortField = 'subjectName' | 'credits' | 'processMark' | 'examMark' | 'totalMark' | 'letterGrade';
-type SortDirection = 'asc' | 'desc';
+import { DataTable } from '@/components/data-table';
+import { ColumnDef } from '@tanstack/react-table';
+import { Input } from '@/components/ui/input';
 
 export default function GradePage() {
   const router = useRouter();
@@ -20,6 +26,10 @@ export default function GradePage() {
     subjectMarks,
     marksLoading,
     marksError,
+    marksSearchQuery,
+    setMarksSearchQuery,
+    marksFilters,
+    setMarksFilters,
     fetchSubjectMarks,
   } = useStudentStore();
   const [mounted, setMounted] = useState(false);
@@ -42,14 +52,225 @@ export default function GradePage() {
     }
   }, [mounted, isAuthenticated]);
 
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  
   // State cho modal hiển thị môn học theo kỳ
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSemesterMarks, setSelectedSemesterMarks] = useState<SubjectMark[]>([]);
   const [selectedSemesterName, setSelectedSemesterName] = useState<string>('');
 
+  // Định nghĩa columns cho data table
+  const columns: ColumnDef<SubjectMark>[] = useMemo(() => [
+    {
+      accessorKey: 'index',
+      header: 'STT',
+      cell: ({ row }) => {
+        return <div className="text-center">{row.index + 1}</div>;
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'subjectName',
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="h-8 px-2 hover:bg-transparent"
+          >
+            Tên môn học
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => {
+        return <div>{row.getValue('subjectName') || '-'}</div>;
+      },
+    },
+    {
+      accessorKey: 'credits',
+      header: ({ column }) => {
+        return (
+          <div className="text-center">
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              className="h-8 px-2 hover:bg-transparent"
+            >
+              Tín chỉ
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+      cell: ({ row }) => {
+        const credits = row.getValue('credits') as number | undefined;
+        return <div className="text-center">{credits !== undefined ? credits : '-'}</div>;
+      },
+    },
+    {
+      accessorKey: 'isCounted',
+      header: ({ column }) => {
+        return (
+          <div className="text-center">
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              className="h-8 px-2 hover:bg-transparent"
+            >
+              Môn tính điểm
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+      cell: ({ row }) => {
+        const isCounted = row.getValue('isCounted') as boolean | undefined;
+        return (
+          <div className="flex items-center justify-center">
+            <Checkbox
+              checked={isCounted === true}
+              disabled
+              aria-label={isCounted === true ? 'Môn tính điểm' : 'Môn không tính điểm'}
+            />
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'processMark',
+      header: ({ column }) => {
+        return (
+          <div className="text-center">
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              className="h-8 px-2 hover:bg-transparent"
+            >
+              Điểm quá trình
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+      cell: ({ row }) => {
+        const mark = row.getValue('processMark') as number | undefined;
+        return <div className="text-center">{mark !== undefined ? mark.toFixed(2) : '-'}</div>;
+      },
+    },
+    {
+      accessorKey: 'examMark',
+      header: ({ column }) => {
+        return (
+          <div className="text-center">
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              className="h-8 px-2 hover:bg-transparent"
+            >
+              Điểm thi
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+      cell: ({ row }) => {
+        const mark = row.getValue('examMark') as number | undefined;
+        return <div className="text-center">{mark !== undefined ? mark.toFixed(2) : '-'}</div>;
+      },
+    },
+    {
+      accessorKey: 'totalMark',
+      header: ({ column }) => {
+        return (
+          <div className="text-center">
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              className="h-8 px-2 hover:bg-transparent"
+            >
+              Tổng điểm
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+      cell: ({ row }) => {
+        const mark = row.getValue('totalMark') as number | undefined;
+        return <div className="text-center font-semibold">{mark !== undefined ? mark.toFixed(2) : '-'}</div>;
+      },
+    },
+    {
+      accessorKey: 'letterGrade',
+      header: ({ column }) => {
+        return (
+          <div className="text-center">
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              className="h-8 px-2 hover:bg-transparent"
+            >
+              Điểm chữ
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+      cell: ({ row }) => {
+        const grade = row.getValue('letterGrade') as string | undefined;
+        return <div className="text-center font-semibold">{grade || '-'}</div>;
+      },
+    },
+  ], []);
+
+  // Lọc dữ liệu theo filters
+  const filteredMarks = useMemo(() => {
+    return subjectMarks.filter((mark) => {
+      // Filter theo pass status
+      if (marksFilters.passStatus !== 'all') {
+        const letterGrade = mark.letterGrade?.toUpperCase();
+        // Đã qua: không phải F, I, hoặc có result === 1
+        const isPassed = letterGrade && 
+          letterGrade !== 'F' && 
+          letterGrade !== 'I' &&
+          (mark.result === 1 || (mark.result === undefined && letterGrade !== 'F'));
+        
+        if (marksFilters.passStatus === 'passed' && !isPassed) return false;
+        if (marksFilters.passStatus === 'failed' && isPassed) return false;
+      }
+
+      // Filter theo letter grade
+      if (marksFilters.letterGrade !== 'all') {
+        const grade = mark.letterGrade?.toUpperCase();
+        if (grade !== marksFilters.letterGrade) return false;
+      }
+
+      // Filter theo isCounted
+      if (marksFilters.isCounted !== 'all') {
+        if (marksFilters.isCounted === 'yes' && mark.isCounted !== true) return false;
+        if (marksFilters.isCounted === 'no' && mark.isCounted !== false) return false;
+      }
+
+      // Filter theo credits
+      if (marksFilters.credits !== 'all') {
+        const credits = mark.credits || 0;
+        switch (marksFilters.credits) {
+          case '1':
+            if (credits !== 1) return false;
+            break;
+          case '2':
+            if (credits !== 2) return false;
+            break;
+          case '3':
+            if (credits !== 3) return false;
+            break;
+          case 'above3':
+            if (credits <= 3) return false;
+            break;
+        }
+      }
+
+      return true;
+    });
+  }, [subjectMarks, marksFilters]);
 
   // Tính GPA trung bình toàn khóa và theo từng năm học
   const { overallGPA, yearGPAs } = useMemo(() => {
@@ -84,172 +305,196 @@ export default function GradePage() {
     return { overallGPA: overall, yearGPAs: byYear };
   }, [subjectMarks]);
 
-  // Component để render bảng điểm
-  const MarksTable = ({ 
-    marks, 
-    sortField: tableSortField, 
-    setSortField: setTableSortField, 
-    sortDirection: tableSortDirection, 
-    setSortDirection: setTableSortDirection 
-  }: { 
-    marks: SubjectMark[];
-    sortField: SortField | null;
-    setSortField: (field: SortField | null) => void;
-    sortDirection: SortDirection;
-    setSortDirection: (dir: SortDirection) => void;
-  }) => {
-    const handleSort = (field: SortField) => {
-      if (tableSortField === field) {
-        setTableSortDirection(tableSortDirection === 'asc' ? 'desc' : 'asc');
-      } else {
-        setTableSortField(field);
-        setTableSortDirection('asc');
-      }
-    };
-
-    const sortedMarks = [...marks].sort((a, b) => {
-      if (!tableSortField) return 0;
-
-      let aValue: any = a[tableSortField];
-      let bValue: any = b[tableSortField];
-
-      // Handle undefined/null values
-      if (aValue === undefined || aValue === null) aValue = '';
-      if (bValue === undefined || bValue === null) bValue = '';
-
-      // Handle numeric values
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return tableSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-
-      // Handle string values
-      const aStr = String(aValue).toLowerCase();
-      const bStr = String(bValue).toLowerCase();
-      
-      if (tableSortDirection === 'asc') {
-        return aStr.localeCompare(bStr);
-      } else {
-        return bStr.localeCompare(aStr);
-      }
-    });
-
-    const getSortIcon = (field: SortField) => {
-      if (tableSortField !== field) {
-        return '↕️';
-      }
-      return tableSortDirection === 'asc' ? '↑' : '↓';
-    };
-
-    if (marks.length === 0) {
-      return null;
-    }
-
+  // Component filter UI trong popover
+  const FilterPopover = () => {
+    const isLetterGradeDisabled = marksFilters.passStatus === 'failed';
+    
     return (
-      <div className="mb-8 rounded-lg border border-border bg-card p-6">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="whitespace-nowrap px-4 py-3 text-center font-medium text-muted-foreground">
-                  STT
-                </th>
-                <th 
-                  className="whitespace-nowrap px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleSort('subjectName')}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Lọc"
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[calc(100vw-2rem)] max-w-96 max-h-[80vh] overflow-y-auto" align="start">
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium text-sm mb-4">Bộ lọc</h4>
+            </div>
+            
+            {/* Pass Status Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Trạng thái:</label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={marksFilters.passStatus === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setMarksFilters({ passStatus: 'all' });
+                    if (marksFilters.letterGrade !== 'all') {
+                      setMarksFilters({ letterGrade: 'all' });
+                    }
+                  }}
                 >
-                  <div className="flex items-center gap-2">
-                    Tên môn học
-                    <span className="text-xs">{getSortIcon('subjectName')}</span>
-                  </div>
-                </th>
-                <th 
-                  className="whitespace-nowrap px-4 py-3 text-center font-medium text-muted-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleSort('credits')}
+                  Tất cả
+                </Button>
+                <Button
+                  variant={marksFilters.passStatus === 'passed' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setMarksFilters({ passStatus: 'passed' });
+                    if (marksFilters.letterGrade !== 'all') {
+                      setMarksFilters({ letterGrade: 'all' });
+                    }
+                  }}
                 >
-                  <div className="flex items-center justify-center gap-2">
-                    Tín chỉ
-                    <span className="text-xs">{getSortIcon('credits')}</span>
-                  </div>
-                </th>
-                <th 
-                  className="whitespace-nowrap px-4 py-3 text-center font-medium text-muted-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleSort('processMark')}
+                  Đã qua
+                </Button>
+                <Button
+                  variant={marksFilters.passStatus === 'failed' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setMarksFilters({ passStatus: 'failed', letterGrade: 'all' });
+                  }}
                 >
-                  <div className="flex items-center justify-center gap-2">
-                    Điểm quá trình
-                    <span className="text-xs">{getSortIcon('processMark')}</span>
-                  </div>
-                </th>
-                <th 
-                  className="whitespace-nowrap px-4 py-3 text-center font-medium text-muted-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleSort('examMark')}
+                  Trượt
+                </Button>
+              </div>
+            </div>
+
+            {/* Letter Grade Filter */}
+            <div className="space-y-2">
+              <label className={`text-sm font-medium ${isLetterGradeDisabled ? 'text-muted-foreground' : 'text-foreground'}`}>
+                Điểm chữ:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={marksFilters.letterGrade === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ letterGrade: 'all' })}
+                  disabled={isLetterGradeDisabled}
                 >
-                  <div className="flex items-center justify-center gap-2">
-                    Điểm thi
-                    <span className="text-xs">{getSortIcon('examMark')}</span>
-                  </div>
-                </th>
-                <th 
-                  className="whitespace-nowrap px-4 py-3 text-center font-medium text-muted-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleSort('totalMark')}
+                  Tất cả
+                </Button>
+                <Button
+                  variant={marksFilters.letterGrade === 'A' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ letterGrade: 'A' })}
+                  disabled={isLetterGradeDisabled}
                 >
-                  <div className="flex items-center justify-center gap-2">
-                    Tổng điểm
-                    <span className="text-xs">{getSortIcon('totalMark')}</span>
-                  </div>
-                </th>
-                <th 
-                  className="whitespace-nowrap px-4 py-3 text-center font-medium text-muted-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleSort('letterGrade')}
+                  A
+                </Button>
+                <Button
+                  variant={marksFilters.letterGrade === 'B' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ letterGrade: 'B' })}
+                  disabled={isLetterGradeDisabled}
                 >
-                  <div className="flex items-center justify-center gap-2">
-                    Điểm chữ
-                    <span className="text-xs">{getSortIcon('letterGrade')}</span>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedMarks.map((mark, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-border hover:bg-muted/50 transition-colors"
+                  B
+                </Button>
+                <Button
+                  variant={marksFilters.letterGrade === 'C' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ letterGrade: 'C' })}
+                  disabled={isLetterGradeDisabled}
                 >
-                  <td className="px-4 py-3 text-center text-foreground">
-                    {index + 1}
-                  </td>
-                  <td className="px-4 py-3 text-foreground">
-                    {mark.subjectName || '-'}
-                  </td>
-                  <td className="px-4 py-3 text-center text-foreground">
-                    {mark.credits !== undefined ? mark.credits : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-center text-foreground">
-                    {mark.processMark !== undefined 
-                      ? mark.processMark.toFixed(2) 
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-center text-foreground">
-                    {mark.examMark !== undefined 
-                      ? mark.examMark.toFixed(2) 
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-center text-foreground font-semibold">
-                    {mark.totalMark !== undefined 
-                      ? mark.totalMark.toFixed(2) 
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-center text-foreground font-semibold">
-                    {mark.letterGrade || '-'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  C
+                </Button>
+                <Button
+                  variant={marksFilters.letterGrade === 'D' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ letterGrade: 'D' })}
+                  disabled={isLetterGradeDisabled}
+                >
+                  D
+                </Button>
+              </div>
+              {isLetterGradeDisabled && (
+                <p className="text-xs text-muted-foreground">
+                  Không thể chọn điểm chữ khi đã chọn "Trượt"
+                </p>
+              )}
+            </div>
+
+            {/* IsCounted Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Môn tính điểm:</label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={marksFilters.isCounted === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ isCounted: 'all' })}
+                >
+                  Tất cả
+                </Button>
+                <Button
+                  variant={marksFilters.isCounted === 'yes' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ isCounted: 'yes' })}
+                >
+                  Có
+                </Button>
+                <Button
+                  variant={marksFilters.isCounted === 'no' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ isCounted: 'no' })}
+                >
+                  Không
+                </Button>
+              </div>
+            </div>
+
+            {/* Credits Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Số tín chỉ:</label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={marksFilters.credits === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ credits: 'all' })}
+                >
+                  Tất cả
+                </Button>
+                <Button
+                  variant={marksFilters.credits === '1' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ credits: '1' })}
+                >
+                  1 tín
+                </Button>
+                <Button
+                  variant={marksFilters.credits === '2' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ credits: '2' })}
+                >
+                  2 tín
+                </Button>
+                <Button
+                  variant={marksFilters.credits === '3' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ credits: '3' })}
+                >
+                  3 tín
+                </Button>
+                <Button
+                  variant={marksFilters.credits === 'above3' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMarksFilters({ credits: 'above3' })}
+                >
+                  Trên 3 tín
+                </Button>
+              </div>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
     );
   };
+
 
   if (!mounted) {
     return null;
@@ -261,11 +506,11 @@ export default function GradePage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 overflow-x-hidden">
           {marksLoading && (
             <div className="space-y-6">
               {/* Skeleton cho GPA */}
-              <div className="rounded-lg border border-border bg-card p-6">
+              <div className="rounded-lg border border-border bg-card p-4 md:p-6">
                 <Skeleton className="mb-4 h-7 w-48" />
                 <div className="mb-6">
                   <div className="rounded-lg border border-border bg-card p-4">
@@ -289,7 +534,7 @@ export default function GradePage() {
               </div>
               
               {/* Skeleton cho bảng điểm */}
-              <div className="rounded-lg border border-border bg-card p-6">
+              <div className="rounded-lg border border-border bg-card p-4 md:p-6">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -336,7 +581,7 @@ export default function GradePage() {
 
           {/* Phần tính GPA */}
           {!marksLoading && !marksError && subjectMarks.length > 0 && (
-            <div className="mb-6 rounded-lg border border-border bg-card p-6">
+            <div className="mb-6 rounded-lg border border-border bg-card p-4 md:p-6">
               <h2 className="mb-4 text-2xl font-semibold text-foreground">
                 Kết quả học tập
               </h2>
@@ -370,9 +615,22 @@ export default function GradePage() {
                         key={yearIndex}
                         className="rounded-lg border border-border bg-card p-5"
                       >
-                        <h4 className="mb-4 text-base font-semibold text-foreground">
-                          Năm học {yearData.year}
-                        </h4>
+                        <div className="mb-4 flex items-center justify-between">
+                          <h4 className="text-base font-semibold text-foreground">
+                            Năm học {yearData.year}
+                          </h4>
+                          <div className="text-right">
+                            <div className="text-sm text-muted-foreground">
+                              Điểm trung bình năm học:
+                            </div>
+                            <div className="text-2xl font-bold text-primary">
+                              {yearData.yearGPA.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {yearData.yearCredits} tín chỉ
+                            </div>
+                          </div>
+                        </div>
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                           {yearData.semesters.map((semester, semesterIndex) => {
                             // Lấy danh sách môn học của kỳ này
@@ -418,13 +676,32 @@ export default function GradePage() {
 
           {/* Bảng điểm */}
           {!marksLoading && !marksError && subjectMarks.length > 0 && (
-            <MarksTable
-              marks={subjectMarks}
-              sortField={sortField}
-              setSortField={setSortField}
-              sortDirection={sortDirection}
-              setSortDirection={setSortDirection}
-            />
+            <div className="mb-8 rounded-lg border border-border bg-card p-4 md:p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Tìm kiếm môn học, điểm, kỳ học..."
+                    value={marksSearchQuery ?? ""}
+                    onChange={(e) => setMarksSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <FilterPopover />
+              </div>
+              <div className="overflow-x-auto">
+                <DataTable 
+                  columns={columns} 
+                  data={filteredMarks}
+                  searchQuery={marksSearchQuery}
+                  onSearchChange={setMarksSearchQuery}
+                  getRowClassName={(row) => {
+                    const grade = row.letterGrade?.toUpperCase();
+                    return grade === 'F' ? 'bg-red-500/10 dark:bg-red-500/20' : '';
+                  }}
+                />
+              </div>
+            </div>
           )}
       </div>
 

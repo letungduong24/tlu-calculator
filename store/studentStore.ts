@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import apiClient from '@/lib/axios';
+import { getErrorMessage } from '@/lib/error-handler';
+import { toast } from 'sonner';
 
 export interface StudentSummaryMark {
   studentId?: string;
@@ -98,6 +100,15 @@ interface StudentState {
   subjectMarks: SubjectMark[];
   marksLoading: boolean;
   marksError: string | null;
+  marksSearchQuery: string;
+  setMarksSearchQuery: (query: string) => void;
+  marksFilters: {
+    passStatus: 'all' | 'passed' | 'failed';
+    letterGrade: 'all' | 'A' | 'B' | 'C' | 'D';
+    isCounted: 'all' | 'yes' | 'no';
+    credits: 'all' | '1' | '2' | '3' | 'above3';
+  };
+  setMarksFilters: (filters: Partial<StudentState['marksFilters']>) => void;
   fetchSubjectMarks: () => Promise<void>;
   clearSubjectMarks: () => void;
   educationProgram: EducationBlock[];
@@ -118,6 +129,8 @@ const useStudentStore = create<StudentState>((set, get) => ({
     }
 
     set({ loading: true, error: null });
+    const toastId = toast.loading('Đang tải thông tin sinh viên...');
+    
     try {
       const response = await apiClient.get<any>(
         '/api/studentsummarymark/getbystudent'
@@ -170,13 +183,12 @@ const useStudentStore = create<StudentState>((set, get) => ({
       };
 
       set({ studentData: transformedData, loading: false });
+      toast.success('Tải thông tin sinh viên thành công!', { id: toastId });
     } catch (error) {
       console.error('Error fetching student data:', error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Không thể tải thông tin sinh viên. Vui lòng thử lại.';
+      const errorMessage = getErrorMessage(error) || 'Không thể tải thông tin sinh viên. Vui lòng thử lại.';
       set({ error: errorMessage, loading: false });
+      toast.error(errorMessage, { id: toastId });
     }
   },
   clearStudentData: () =>
@@ -188,6 +200,18 @@ const useStudentStore = create<StudentState>((set, get) => ({
   subjectMarks: [],
   marksLoading: false,
   marksError: null,
+  marksSearchQuery: '',
+  setMarksSearchQuery: (query: string) => set({ marksSearchQuery: query }),
+  marksFilters: {
+    passStatus: 'all',
+    letterGrade: 'all',
+    isCounted: 'all',
+    credits: 'all',
+  },
+  setMarksFilters: (filters: Partial<StudentState['marksFilters']>) => 
+    set((state) => ({ 
+      marksFilters: { ...state.marksFilters, ...filters } 
+    })),
   fetchSubjectMarks: async () => {
     // Tránh gọi API nếu đang loading
     if (get().marksLoading) {
@@ -195,6 +219,8 @@ const useStudentStore = create<StudentState>((set, get) => ({
     }
 
     set({ marksLoading: true, marksError: null });
+    const toastId = toast.loading('Đang tải điểm môn học...');
+    
     try {
       const response = await apiClient.get<any>(
         '/api/studentsubjectmark/getListStudentMarkBySemesterByLoginUser/0'
@@ -281,13 +307,12 @@ const useStudentStore = create<StudentState>((set, get) => ({
       console.log('=== TRANSFORMED MARKS ===', JSON.stringify(transformedMarks, null, 2));
 
       set({ subjectMarks: transformedMarks, marksLoading: false });
+      toast.success('Tải điểm môn học thành công!', { id: toastId });
     } catch (error) {
       console.error('Error fetching subject marks:', error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Không thể tải thông tin điểm môn học. Vui lòng thử lại.';
+      const errorMessage = getErrorMessage(error) || 'Không thể tải thông tin điểm môn học. Vui lòng thử lại.';
       set({ marksError: errorMessage, marksLoading: false });
+      toast.error(errorMessage, { id: toastId });
     }
   },
   clearSubjectMarks: () =>
@@ -295,6 +320,13 @@ const useStudentStore = create<StudentState>((set, get) => ({
       subjectMarks: [],
       marksLoading: false,
       marksError: null,
+      marksSearchQuery: '',
+      marksFilters: {
+        passStatus: 'all',
+        letterGrade: 'all',
+        isCounted: 'all',
+        credits: 'all',
+      },
     }),
   educationProgram: [],
   educationProgramLoading: false,
@@ -306,6 +338,8 @@ const useStudentStore = create<StudentState>((set, get) => ({
     }
 
     set({ educationProgramLoading: true, educationProgramError: null });
+    const toastId = toast.loading('Đang tải chương trình học...');
+    
     try {
       // API mặc định với studentId = 178
       const response = await apiClient.get<{ content: EducationBlock[]; totalElements: number }>(
@@ -316,13 +350,12 @@ const useStudentStore = create<StudentState>((set, get) => ({
         educationProgram: response.data.content || [], 
         educationProgramLoading: false 
       });
+      toast.success('Tải chương trình học thành công!', { id: toastId });
     } catch (error) {
       console.error('Error fetching education program:', error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Không thể tải thông tin chương trình học. Vui lòng thử lại.';
+      const errorMessage = getErrorMessage(error) || 'Không thể tải thông tin chương trình học. Vui lòng thử lại.';
       set({ educationProgramError: errorMessage, educationProgramLoading: false });
+      toast.error(errorMessage, { id: toastId });
     }
   },
   clearEducationProgram: () =>

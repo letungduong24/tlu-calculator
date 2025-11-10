@@ -122,6 +122,8 @@ export interface SemesterGPA {
 export interface YearGPA {
   year: string;
   semesters: SemesterGPA[];
+  yearGPA: number;
+  yearCredits: number;
 }
 
 /**
@@ -148,6 +150,8 @@ export const calculateGPAByYear = (marks: SubjectMark[]): YearGPA[] => {
     year: string; 
     sortKey: number;
     semesters: SemesterGPA[];
+    yearGPA: number;
+    yearCredits: number;
   }> = [];
 
   yearMap.forEach((yearMarks, schoolYear) => {
@@ -190,6 +194,12 @@ export const calculateGPAByYear = (marks: SubjectMark[]): YearGPA[] => {
     // Sắp xếp các kỳ trong năm học (kỳ 1 trước, kỳ 2 sau)
     semesterGPAs.sort((a, b) => a.sortKey - b.sortKey);
 
+    // Tính GPA trung bình năm học (tất cả môn trong năm)
+    const yearGPA = calculateGPA(yearMarks);
+    const yearCredits = yearMarks
+      .filter(mark => shouldCountInGPA(mark))
+      .reduce((sum, mark) => sum + (mark.credits || 0), 0);
+    
     // Extract năm bắt đầu để sắp xếp năm học (ví dụ: "2022-2023" -> 2022)
     const startYear = parseInt(schoolYear.split('-')[0]) || 0;
     
@@ -197,12 +207,19 @@ export const calculateGPAByYear = (marks: SubjectMark[]): YearGPA[] => {
       year: schoolYear,
       sortKey: startYear,
       semesters: semesterGPAs.map(({ semester, gpa, credits }) => ({ semester, gpa, credits })),
+      yearGPA,
+      yearCredits,
     });
   });
 
   // Sắp xếp theo năm học từ quá khứ đến hiện tại (năm cũ trước, năm mới sau)
   yearData.sort((a, b) => a.sortKey - b.sortKey);
 
-  return yearData.map(({ year, semesters }) => ({ year, semesters }));
+  return yearData.map(({ year, semesters, yearGPA, yearCredits }) => ({ 
+    year, 
+    semesters,
+    yearGPA,
+    yearCredits,
+  }));
 };
 

@@ -16,9 +16,10 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Home, GraduationCap, Target, LogOut, LogIn } from 'lucide-react';
+import { Home, GraduationCap, Target, LogOut, LogIn, Info } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
 import useStudentStore from '@/store/studentStore';
+import useLoginDialogStore from '@/store/loginDialogStore';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 interface DashboardLayoutProps {
@@ -30,6 +31,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
   const { clearStudentData } = useStudentStore();
+  const { openLoginDialog } = useLoginDialogStore();
 
   const handleLogout = () => {
     clearStudentData();
@@ -92,8 +94,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       onClick={() => router.push(item.url)}
                       isActive={item.active}
                       tooltip={item.title}
+                      className="h-12 px-4 text-base !font-bold"
                     >
-                      <item.icon />
+                      <item.icon className="size-5" />
                       <span>{item.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -104,23 +107,36 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => router.push('/info')}
+                isActive={pathname === '/info'}
+                tooltip="Thông tin"
+                className="h-12 px-4 text-base !font-bold"
+              >
+                <Info className="size-5" />
+                <span>Thông tin</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             {isAuthenticated ? (
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={handleLogout}
                   tooltip="Đăng xuất"
+                  className="h-12 px-4 text-base !font-bold"
                 >
-                  <LogOut />
+                  <LogOut className="size-5" />
                   <span>Đăng xuất</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ) : (
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => router.push('/login')}
+                  onClick={openLoginDialog}
                   tooltip="Đăng nhập"
+                  className="h-12 px-4 text-base !font-bold"
                 >
-                  <LogIn />
+                  <LogIn className="size-5" />
                   <span>Đăng nhập</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -136,6 +152,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               {pathname === '/' && 'Trang chủ'}
               {pathname === '/grade' && 'Xem điểm'}
               {pathname === '/aim' && 'Tính GPA mục tiêu'}
+              {pathname === '/info' && 'Thông tin'}
               {pathname === '/login' && 'Đăng nhập'}
             </h1>
           </div>

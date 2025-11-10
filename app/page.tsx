@@ -5,14 +5,17 @@ import { useRouter } from 'next/navigation';
 import useAuthStore from '@/store/authStore';
 import useStudentStore from '@/store/studentStore';
 import useScheduleStore from '@/store/scheduleStore';
-import dayjs from 'dayjs';
+import useLoginDialogStore from '@/store/loginDialogStore';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScheduleList } from '@/components/schedule-list';
 
 export default function Home() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const { openLoginDialog } = useLoginDialogStore();
   const {
     studentData,
     loading,
@@ -28,7 +31,8 @@ export default function Home() {
     loadScheduleFromIDB,
   } = useScheduleStore();
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'all' | 'date'>('today');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     setMounted(true);
@@ -63,7 +67,7 @@ export default function Home() {
               <div className="flex items-center justify-between">
                 <span className="text-foreground">Bạn chưa đăng nhập. Vui lòng đăng nhập để xem thông tin sinh viên và điểm số.</span>
                 <Button
-                  onClick={() => router.push('/login')}
+                  onClick={openLoginDialog}
                   className="ml-4"
                 >
                   Đăng nhập
@@ -246,7 +250,10 @@ export default function Home() {
                 {/* Tabs */}
                 <div className="mb-4 flex gap-2 border-b border-border">
                   <Button
-                    onClick={() => setActiveTab('today')}
+                    onClick={() => {
+                      setActiveTab('today');
+                      setSelectedDate(undefined);
+                    }}
                     variant="ghost"
                     size="sm"
                     className={`rounded-none border-b-2 -mb-px ${
@@ -258,7 +265,10 @@ export default function Home() {
                     Hôm nay
                   </Button>
                   <Button
-                    onClick={() => setActiveTab('all')}
+                    onClick={() => {
+                      setActiveTab('all');
+                      setSelectedDate(undefined);
+                    }}
                     variant="ghost"
                     size="sm"
                     className={`rounded-none border-b-2 -mb-px ${
@@ -269,107 +279,43 @@ export default function Home() {
                   >
                     Tất cả các ngày
                   </Button>
+                  <Button
+                    onClick={() => {
+                      setActiveTab('date');
+                      setSelectedDate(new Date());
+                    }}
+                    variant="ghost"
+                    size="sm"
+                    className={`rounded-none border-b-2 -mb-px ${
+                      activeTab === 'date' 
+                        ? 'border-primary text-foreground font-medium' 
+                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50'
+                    }`}
+                  >
+                    Tìm theo ngày
+                  </Button>
                 </div>
 
-                {scheduleLoading && (
-                  <div className="space-y-4">
-                    <Skeleton className="h-6 w-32" />
-                    <div className="space-y-3">
-                      <div className="rounded-lg border border-border bg-card p-4">
-                        <Skeleton className="mb-3 h-5 w-40" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-20 w-full" />
-                          <Skeleton className="h-20 w-full" />
-                        </div>
-                      </div>
-                    </div>
+                {activeTab === 'date' && (
+                  <div className="mb-6 flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date: Date | undefined) => {
+                        setSelectedDate(date);
+                      }}
+                      className="rounded-md border"
+                    />
                   </div>
                 )}
-                {scheduleError && (
-                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-                    {scheduleError}
-                  </div>
-                )}
-                {!scheduleLoading && !scheduleError && (() => {
-                  const today = dayjs().startOf('day');
-                  const todaySchedule = scheduleByDate.filter((item) =>
-                    item.dateObj.isSame(today)
-                  );
-                  const displaySchedule = activeTab === 'today' ? todaySchedule : scheduleByDate;
-                  
-                  if (displaySchedule.length === 0) {
-                    return (
-                      <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-                        {activeTab === 'today' ? 'Hôm nay không có lịch học.' : 'Chưa có lịch học.'}
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <div className="space-y-4">
-                      {displaySchedule.map((dateGroup, dateIndex) => {
-                        const dayNames = [
-                          'Chủ nhật',
-                          'Thứ 2',
-                          'Thứ 3',
-                          'Thứ 4',
-                          'Thứ 5',
-                          'Thứ 6',
-                          'Thứ 7',
-                        ];
-                        const dayOfWeek = dateGroup.dateObj.day();
-                        const dayName = dayNames[dayOfWeek] || 'Chưa xác định';
-                        
-                        return (
-                          <div
-                            key={dateIndex}
-                            className="rounded-lg border border-border bg-card p-4"
-                          >
-                            <div className="mb-3 border-b border-border pb-2">
-                              <h4 className="text-lg font-semibold text-foreground">
-                                {dayName}, {dateGroup.date}
-                              </h4>
-                            </div>
-                            <div className="space-y-3">
-                              {dateGroup.items.map((item, itemIndex) => (
-                                <div
-                                  key={itemIndex}
-                                  className="rounded-lg border border-border bg-muted p-3"
-                                >
-                                  <div className="mb-2">
-                                    <h5 className="text-base font-semibold text-foreground">
-                                      {item.subjectName}
-                                    </h5>
-                                  </div>
-                                  <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                                    <div className="flex items-center text-muted-foreground">
-                                      <span className="font-medium">Thời gian:</span>
-                                      <span className="ml-2 text-foreground">
-                                        {item.startTime} - {item.endTime}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center text-muted-foreground">
-                                      <span className="font-medium">Tiết:</span>
-                                      <span className="ml-2 text-foreground">
-                                        Tiết {item.startPeriod} - Tiết {item.endPeriod}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center text-muted-foreground">
-                                      <span className="font-medium">Phòng:</span>
-                                      <span className="ml-2 text-foreground">
-                                        {item.room}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
+
+                <ScheduleList
+                  scheduleByDate={scheduleByDate}
+                  scheduleLoading={scheduleLoading}
+                  scheduleError={scheduleError}
+                  activeTab={activeTab}
+                  selectedDate={selectedDate}
+                />
           </div>
 
           {/* Danh sách điểm môn học - Chỉ hiển thị khi đã đăng nhập */}
