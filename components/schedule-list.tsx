@@ -117,11 +117,11 @@ export function ScheduleList({
                           {item.room}
                         </Badge>
                       </div>
-                      <div>
-                        <h5 className="text-base font-semibold text-foreground">
-                          {item.subjectName}
-                        </h5>
-                      </div>
+                       <div>
+                         <h5 className="text-base font-semibold text-foreground">
+                           {item.subjectCode || item.subjectName}
+                         </h5>
+                       </div>
                     </div>
                   </div>
                 ))}

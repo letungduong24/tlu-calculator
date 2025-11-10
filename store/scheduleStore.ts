@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 export interface ScheduleItem {
   subjectName: string;
+  subjectCode?: string;
   room: string;
   startPeriod: number;
   endPeriod: number;

@@ -30,6 +30,7 @@ interface Timetable {
 interface CourseSubject {
   id: number;
   subjectName: string;
+  subjectCode?: string;
   courseSubject: {
     timetables: Timetable[];
   };
@@ -172,6 +173,7 @@ export const transformScheduleData = (
       
       scheduleItems.push({
         subjectName: course.subjectName,
+        subjectCode: course.subjectCode,
         room: timetable.room?.name || timetable.room?.code || 'Chưa xác định',
         startPeriod: timetable.startHour.indexNumber,
         endPeriod: timetable.endHour.indexNumber,
