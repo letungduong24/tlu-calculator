@@ -1,7 +1,7 @@
 'use client';
 
 import dayjs from 'dayjs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Clock, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScheduleByDate } from '@/store/scheduleStore';
@@ -100,28 +100,30 @@ export function ScheduleList({
         return (
           <div className='space-y-3 border-b border-border pb-3' key={dateIndex}>
             <h5 className="text-base font-semibold text-foreground">{dayName}, {dateGroup.date}</h5>
-            <div>
+            <div className='space-y-3'>
                 {dateGroup.items.map((item, itemIndex) => (
-                  <Card key={itemIndex} className="bg-muted p-3">
-                    <CardContent className="p-0">
-                      <div className="mb-3">
+                  <div key={itemIndex} className="bg-muted rounded-xl p-4">
+                    <div className="p-0 space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className="font-bold border-red-500 text-red-600 dark:text-red-400 bg-transparent hover:bg-transparent">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {item.startTime} - {item.endTime}
+                        </Badge>
+                        <Badge variant="outline" className="bg-transparent hover:bg-transparent">
+                          Tiết {item.startPeriod} - {item.endPeriod}
+                        </Badge>
+                        <Badge variant="outline" className="bg-transparent hover:bg-transparent">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {item.room}
+                        </Badge>
+                      </div>
+                      <div>
                         <h5 className="text-base font-semibold text-foreground">
                           {item.subjectName}
                         </h5>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
-                          {item.startTime} - {item.endTime}
-                        </Badge>
-                        <Badge variant="secondary" className="bg-purple-500 hover:bg-purple-600 text-white">
-                          Tiết {item.startPeriod} - {item.endPeriod}
-                        </Badge>
-                        <Badge variant="default" className="bg-orange-500 hover:bg-orange-600 text-white">
-                          {item.room}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
           </div>
