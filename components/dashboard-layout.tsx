@@ -19,6 +19,7 @@ import {
 import { Home, GraduationCap, Target, LogOut, LogIn } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
 import useStudentStore from '@/store/studentStore';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -138,6 +139,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               {pathname === '/login' && 'Đăng nhập'}
             </h1>
           </div>
+          <ThemeToggle />
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
           {children}
