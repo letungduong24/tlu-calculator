@@ -4,12 +4,29 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useAuthStore from '@/store/authStore';
 import useStudentStore from '@/store/studentStore';
+import useScheduleStore from '@/store/scheduleStore';
+import dayjs from 'dayjs';
 
 export default function Home() {
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
-  const { studentData, loading, error, fetchStudentData, clearStudentData } = useStudentStore();
+  const {
+    studentData,
+    loading,
+    error,
+    fetchStudentData,
+    clearStudentData,
+  } = useStudentStore();
+  const {
+    scheduleByDate,
+    scheduleLoading,
+    scheduleError,
+    scheduleFetched,
+    fetchSchedule,
+    loadScheduleFromIDB,
+  } = useScheduleStore();
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
 
   useEffect(() => {
     setMounted(true);
@@ -26,6 +43,11 @@ export default function Home() {
     if (!studentData && !loading) {
       fetchStudentData();
     }
+    // Load lịch học từ IDB
+    if (!scheduleFetched && !scheduleLoading) {
+      loadScheduleFromIDB();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, isAuthenticated]);
 
   const handleLogout = () => {
@@ -53,10 +75,6 @@ export default function Home() {
         </div>
         
         <div className="w-full px-8 py-6 pb-24">
-          <h2 className="mb-6 text-2xl font-semibold text-black dark:text-zinc-50">
-            Thông tin sinh viên
-          </h2>
-
           {loading && (
             <div className="rounded-lg bg-blue-50 p-4 text-center text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
               Đang tải thông tin...
@@ -77,15 +95,13 @@ export default function Home() {
 
           {studentData && !loading && (
             <div className="space-y-6">
-              {/* Thông tin cá nhân và lớp học - đứng ngang hàng */}
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {/* Thông tin cơ bản */}
-                {(studentData.studentCode || studentData.studentName || studentData.fullName || studentData.email || studentData.phoneNumber) && (
-                  <div className="rounded-lg bg-zinc-100 p-6 dark:bg-zinc-800">
-                    <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                      Thông tin cá nhân
-                    </h3>
-                    <div className="grid grid-cols-1 gap-3 text-sm">
+              {/* Thông tin sinh viên */}
+              {(studentData.studentCode || studentData.fullName || studentData.studentName || studentData.className || studentData.departmentName) && (
+                <div className="rounded-lg bg-zinc-100 p-6 dark:bg-zinc-800">
+                  <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                    Thông tin sinh viên
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     {studentData.studentCode && (
                       <div>
                         <span className="font-medium text-zinc-700 dark:text-zinc-300">
@@ -96,124 +112,23 @@ export default function Home() {
                         </span>
                       </div>
                     )}
-                    {studentData.fullName && (
+                    {(studentData.fullName || studentData.studentName) && (
                       <div>
                         <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Họ và tên:
+                          Họ tên:
                         </span>{' '}
                         <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.fullName}
+                          {studentData.fullName || studentData.studentName}
                         </span>
                       </div>
                     )}
-                    {studentData.email && (
-                      <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Email:
-                        </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.email}
-                        </span>
-                      </div>
-                    )}
-                    {studentData.phoneNumber && (
-                      <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Số điện thoại:
-                        </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.phoneNumber}
-                        </span>
-                      </div>
-                    )}
-                    {studentData.birthDateString && (
-                      <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Ngày sinh:
-                        </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.birthDateString}
-                        </span>
-                      </div>
-                    )}
-                    {studentData.birthPlace && (
-                      <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Nơi sinh:
-                        </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.birthPlace}
-                        </span>
-                      </div>
-                    )}
-                    {studentData.gender && (
-                      <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Giới tính:
-                        </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.gender === 'M' ? 'Nam' : studentData.gender === 'F' ? 'Nữ' : studentData.gender}
-                        </span>
-                      </div>
-                    )}
-                    {studentData.idNumber && (
-                      <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Số CMND/CCCD:
-                        </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.idNumber}
-                        </span>
-                      </div>
-                    )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Thông tin lớp học */}
-                {(studentData.className || studentData.classCode || studentData.departmentName || studentData.specialityName || studentData.courseYear || studentData.educationTypeName) && (
-                  <div className="rounded-lg bg-zinc-100 p-6 dark:bg-zinc-800">
-                    <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                      Thông tin lớp học
-                    </h3>
-                    <div className="grid grid-cols-1 gap-3 text-sm">
                     {studentData.className && (
                       <div>
                         <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Tên lớp:
+                          Lớp:
                         </span>{' '}
                         <span className="text-zinc-900 dark:text-zinc-50">
                           {studentData.className}
-                        </span>
-                      </div>
-                    )}
-                    {studentData.classCode && (
-                      <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Mã lớp:
-                        </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.classCode}
-                        </span>
-                      </div>
-                    )}
-                    {studentData.specialityName && (
-                      <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Ngành:
-                        </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.specialityName}
-                        </span>
-                      </div>
-                    )}
-                    {studentData.educationTypeName && (
-                      <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Hệ:
-                        </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.educationTypeName}
                         </span>
                       </div>
                     )}
@@ -227,20 +142,9 @@ export default function Home() {
                         </span>
                       </div>
                     )}
-                    {studentData.courseYear && (
-                      <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Khóa học:
-                        </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
-                          {studentData.courseYear}
-                        </span>
-                      </div>
-                    )}
-                    </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Thông tin điểm số */}
               {(studentData.gpa !== undefined ||
@@ -295,6 +199,137 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
+              {/* Lịch học */}
+              <div className="rounded-lg bg-zinc-100 p-6 dark:bg-zinc-800">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                    Lịch học
+                  </h3>
+                  <button
+                    onClick={fetchSchedule}
+                    disabled={scheduleLoading}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+                  >
+                    {scheduleLoading ? 'Đang tải...' : 'Tải lịch học'}
+                  </button>
+                </div>
+                
+                {/* Tabs */}
+                <div className="mb-4 flex gap-2 border-b border-zinc-300 dark:border-zinc-700">
+                  <button
+                    onClick={() => setActiveTab('today')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === 'today'
+                        ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+                        : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50'
+                    }`}
+                  >
+                    Hôm nay
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('all')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === 'all'
+                        ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+                        : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50'
+                    }`}
+                  >
+                    Tất cả các ngày
+                  </button>
+                </div>
+
+                {scheduleLoading && (
+                  <div className="rounded-lg bg-blue-50 p-4 text-center text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
+                    Đang tải lịch học...
+                  </div>
+                )}
+                {scheduleError && (
+                  <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                    {scheduleError}
+                  </div>
+                )}
+                {!scheduleLoading && !scheduleError && (() => {
+                  const today = dayjs().startOf('day');
+                  const todaySchedule = scheduleByDate.filter((item) =>
+                    item.dateObj.isSame(today)
+                  );
+                  const displaySchedule = activeTab === 'today' ? todaySchedule : scheduleByDate;
+                  
+                  if (displaySchedule.length === 0) {
+                    return (
+                      <div className="rounded-lg bg-yellow-50 p-4 text-sm text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400">
+                        {activeTab === 'today' ? 'Hôm nay không có lịch học.' : 'Chưa có lịch học.'}
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="space-y-4">
+                      {displaySchedule.map((dateGroup, dateIndex) => {
+                        const dayNames = [
+                          'Chủ nhật',
+                          'Thứ 2',
+                          'Thứ 3',
+                          'Thứ 4',
+                          'Thứ 5',
+                          'Thứ 6',
+                          'Thứ 7',
+                        ];
+                        const dayOfWeek = dateGroup.dateObj.day();
+                        const dayName = dayNames[dayOfWeek] || 'Chưa xác định';
+                        
+                        return (
+                          <div
+                            key={dateIndex}
+                            className="rounded-lg border border-zinc-300 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
+                          >
+                            <div className="mb-3 border-b border-zinc-200 pb-2 dark:border-zinc-700">
+                              <h4 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                                {dayName}, {dateGroup.date}
+                              </h4>
+                            </div>
+                            <div className="space-y-3">
+                              {dateGroup.items.map((item, itemIndex) => (
+                                <div
+                                  key={itemIndex}
+                                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800"
+                                >
+                                  <div className="mb-2">
+                                    <h5 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                                      {item.subjectName}
+                                    </h5>
+                                  </div>
+                                  <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                                    <div className="flex items-center text-zinc-700 dark:text-zinc-300">
+                                      <span className="font-medium">Thời gian:</span>
+                                      <span className="ml-2 text-zinc-900 dark:text-zinc-50">
+                                        {item.startTime} - {item.endTime}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center text-zinc-700 dark:text-zinc-300">
+                                      <span className="font-medium">Tiết:</span>
+                                      <span className="ml-2 text-zinc-900 dark:text-zinc-50">
+                                        Tiết {item.startPeriod} - Tiết {item.endPeriod}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center text-zinc-700 dark:text-zinc-300">
+                                      <span className="font-medium">Phòng:</span>
+                                      <span className="ml-2 text-zinc-900 dark:text-zinc-50">
+                                        {item.room}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
 
               {/* Danh sách điểm môn học */}
               {studentData.summaryMarks &&
