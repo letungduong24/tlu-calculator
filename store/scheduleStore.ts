@@ -30,6 +30,7 @@ interface ScheduleState {
   scheduleFetched: boolean;
   fetchSchedule: () => Promise<void>;
   loadScheduleFromIDB: () => Promise<void>;
+  useCurrentSchedule: () => Promise<void>;
   clearSchedule: () => void;
 }
 
@@ -46,19 +47,16 @@ const useScheduleStore = create<ScheduleState>((set, get) => ({
 
     set({ scheduleLoading: true, scheduleError: null });
     
-    const toastId = toast.loading('Đang tải lịch học...');
-    
     try {
       const scheduleByDate = await fetchAndProcessSchedule();
       // Lưu vào IDB
       await saveScheduleToIDB(scheduleByDate);
       set({ scheduleByDate, scheduleLoading: false, scheduleFetched: true });
-      toast.success('Tải lịch học thành công!', { id: toastId });
+      toast.success('Tải lịch học thành công!');
     } catch (error) {
       console.error('Error fetching schedule:', error);
       const errorMessage = getErrorMessage(error) || 'Không thể tải lịch học. Vui lòng thử lại.';
       set({ scheduleError: errorMessage, scheduleLoading: false, scheduleFetched: true });
-      toast.error(errorMessage, { id: toastId });
     }
   },
   loadScheduleFromIDB: async () => {
@@ -67,6 +65,21 @@ const useScheduleStore = create<ScheduleState>((set, get) => ({
     }
 
     set({ scheduleLoading: true, scheduleError: null });
+    
+    try {
+      const scheduleByDate = await getScheduleFromIDB();
+      if (scheduleByDate) {
+        set({ scheduleByDate, scheduleLoading: false, scheduleFetched: true });
+      } else {
+        set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true });
+      }
+    } catch (error) {
+      console.error('Error loading schedule from IDB:', error);
+      set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true });
+    }
+  },
+  useCurrentSchedule: async () => {
+    set({ scheduleError: null, scheduleLoading: true });
     
     try {
       const scheduleByDate = await getScheduleFromIDB();

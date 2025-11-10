@@ -3,8 +3,10 @@
 import dayjs from 'dayjs';
 import { Clock, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScheduleByDate } from '@/store/scheduleStore';
+import useScheduleStore from '@/store/scheduleStore';
 
 interface ScheduleListProps {
   scheduleByDate: ScheduleByDate[];
@@ -21,6 +23,7 @@ export function ScheduleList({
   activeTab,
   selectedDate,
 }: ScheduleListProps) {
+  const { useCurrentSchedule } = useScheduleStore();
   if (scheduleLoading) {
     return (
       <div className="space-y-4">
@@ -40,8 +43,18 @@ export function ScheduleList({
 
   if (scheduleError) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-        {scheduleError}
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+        <div className="mb-3 text-sm text-destructive">
+          {scheduleError}
+        </div>
+        <Button
+          onClick={useCurrentSchedule}
+          disabled={scheduleLoading}
+          variant="outline"
+          size="sm"
+        >
+          {scheduleLoading ? 'Đang tải...' : 'Dùng lịch hiện tại'}
+        </Button>
       </div>
     );
   }

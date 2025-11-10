@@ -129,7 +129,6 @@ const useStudentStore = create<StudentState>((set, get) => ({
     }
 
     set({ loading: true, error: null });
-    const toastId = toast.loading('Đang tải thông tin sinh viên...');
     
     try {
       const response = await apiClient.get<any>(
@@ -183,12 +182,11 @@ const useStudentStore = create<StudentState>((set, get) => ({
       };
 
       set({ studentData: transformedData, loading: false });
-      toast.success('Tải thông tin sinh viên thành công!', { id: toastId });
+      toast.success('Tải thông tin sinh viên thành công!');
     } catch (error) {
       console.error('Error fetching student data:', error);
       const errorMessage = getErrorMessage(error) || 'Không thể tải thông tin sinh viên. Vui lòng thử lại.';
       set({ error: errorMessage, loading: false });
-      toast.error(errorMessage, { id: toastId });
     }
   },
   clearStudentData: () =>
@@ -219,7 +217,6 @@ const useStudentStore = create<StudentState>((set, get) => ({
     }
 
     set({ marksLoading: true, marksError: null });
-    const toastId = toast.loading('Đang tải điểm môn học...');
     
     try {
       const response = await apiClient.get<any>(
@@ -307,12 +304,11 @@ const useStudentStore = create<StudentState>((set, get) => ({
       console.log('=== TRANSFORMED MARKS ===', JSON.stringify(transformedMarks, null, 2));
 
       set({ subjectMarks: transformedMarks, marksLoading: false });
-      toast.success('Tải điểm môn học thành công!', { id: toastId });
+      toast.success('Tải điểm môn học thành công!');
     } catch (error) {
       console.error('Error fetching subject marks:', error);
       const errorMessage = getErrorMessage(error) || 'Không thể tải thông tin điểm môn học. Vui lòng thử lại.';
       set({ marksError: errorMessage, marksLoading: false });
-      toast.error(errorMessage, { id: toastId });
     }
   },
   clearSubjectMarks: () =>
@@ -338,7 +334,6 @@ const useStudentStore = create<StudentState>((set, get) => ({
     }
 
     set({ educationProgramLoading: true, educationProgramError: null });
-    const toastId = toast.loading('Đang tải chương trình học...');
     
     try {
       // API mặc định với studentId = 178
@@ -350,12 +345,11 @@ const useStudentStore = create<StudentState>((set, get) => ({
         educationProgram: response.data.content || [], 
         educationProgramLoading: false 
       });
-      toast.success('Tải chương trình học thành công!', { id: toastId });
+      toast.success('Tải chương trình học thành công!');
     } catch (error) {
       console.error('Error fetching education program:', error);
       const errorMessage = getErrorMessage(error) || 'Không thể tải thông tin chương trình học. Vui lòng thử lại.';
       set({ educationProgramError: errorMessage, educationProgramLoading: false });
-      toast.error(errorMessage, { id: toastId });
     }
   },
   clearEducationProgram: () =>

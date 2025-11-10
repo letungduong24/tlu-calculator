@@ -110,8 +110,6 @@ const useAuthStore = create<AuthState>((set) => {
       } catch (error: any) {
         const errorMessage = getErrorMessage(error) || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
         set({ error: errorMessage, loading: false });
-        // Hiển thị toast lỗi
-        toast.error(errorMessage);
         throw error;
       }
     },
