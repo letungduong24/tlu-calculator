@@ -5,6 +5,11 @@ import { useRouter, usePathname } from 'next/navigation';
 import useAuthStore from '@/store/authStore';
 import useStudentStore from '@/store/studentStore';
 import { calculateAimPageData } from '@/lib/services/aimService';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { DashboardLayout } from '@/components/dashboard-layout';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AimPage() {
   const router = useRouter();
@@ -63,31 +68,51 @@ export default function AimPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
-      <main className="w-full min-h-screen bg-white dark:bg-black">
-        <div className="w-full border-b border-zinc-200 bg-white px-8 py-6 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-semibold text-black dark:text-zinc-50">
-              Đặt mục tiêu GPA
-            </h1>
-            <button
-              onClick={() => router.push('/')}
-              className="rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-600"
-            >
-              Về trang chủ
-            </button>
-          </div>
-        </div>
-        
-        <div className="w-full px-8 py-6 pb-24">
+    <DashboardLayout>
+      <div className="space-y-6">
           {educationProgramLoading && (
-            <div className="rounded-lg bg-blue-50 p-4 text-center text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
-              Đang tải thông tin chương trình học...
+            <div className="space-y-6">
+              {/* Skeleton cho tổng quan */}
+              <div className="rounded-lg border border-border bg-card p-6">
+                <Skeleton className="mb-4 h-7 w-32" />
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-5 w-64" />
+                      <Skeleton className="h-9 w-24" />
+                    </div>
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-4 w-12" />
+                      </div>
+                      <Skeleton className="h-2 w-full rounded-full" />
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-5 w-48" />
+                      <Skeleton className="h-9 w-16" />
+                    </div>
+                    <Skeleton className="mt-2 h-4 w-56" />
+                  </div>
+                  
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <Skeleton className="mb-2 h-4 w-32" />
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-9 w-32" />
+                      <Skeleton className="h-9 w-16" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
           {educationProgramError && (
-            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
               {educationProgramError}
             </div>
           )}
@@ -95,23 +120,23 @@ export default function AimPage() {
           {!educationProgramLoading && !educationProgramError && (
             <>
               {/* Hiển thị số tín chỉ */}
-              <div className="mb-6 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 p-6 dark:from-blue-900/20 dark:to-indigo-900/20">
-                <h2 className="mb-4 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+              <div className="mb-6 rounded-lg border border-border bg-card p-6">
+                <h2 className="mb-4 text-2xl font-semibold text-foreground">
                   Tổng quan
                 </h2>
                 
                 <div className="space-y-4">
-                  <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-zinc-800">
+                  <div className="rounded-lg border border-border bg-card p-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
+                      <span className="text-lg font-medium text-muted-foreground">
                         Tín chỉ đã học / Tổng số tín chỉ:
                       </span>
-                      <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                      <span className="text-3xl font-bold text-primary">
                         {passedCredits} / {totalCredits}
                       </span>
                     </div>
                     <div className="mt-4">
-                      <div className="mb-2 flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-400">
+                      <div className="mb-2 flex items-center justify-between text-sm text-muted-foreground">
                         <span>Tiến độ hoàn thành</span>
                         <span>
                           {totalCredits > 0 
@@ -119,9 +144,9 @@ export default function AimPage() {
                             : 0}%
                         </span>
                       </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full bg-blue-600 transition-all duration-300 dark:bg-blue-400"
+                          className="h-full bg-primary transition-all duration-300"
                           style={{
                             width: `${totalCredits > 0 ? (passedCredits / totalCredits) * 100 : 0}%`,
                           }}
@@ -130,27 +155,27 @@ export default function AimPage() {
                     </div>
                   </div>
                   
-                  <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-zinc-800">
+                  <div className="rounded-lg border border-border bg-card p-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
+                      <span className="text-lg font-medium text-muted-foreground">
                         GPA (điểm trung bình):
                       </span>
                       <span className="text-3xl font-bold text-green-600 dark:text-green-400">
                         {gpa.toFixed(2)}
                       </span>
                     </div>
-                    <div className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                    <div className="mt-2 text-sm text-muted-foreground">
                       Tính từ các môn đã hoàn thành (thang điểm 4.0)
                     </div>
                   </div>
                   
                   {/* Input để đặt aim GPA */}
-                  <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-zinc-800">
-                    <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <Label className="mb-2">
                       Đặt mục tiêu GPA:
-                    </label>
+                    </Label>
                     <div className="flex items-center gap-3">
-                      <input
+                      <Input
                         type="number"
                         min="0"
                         max="4"
@@ -161,9 +186,9 @@ export default function AimPage() {
                           setValidationError(''); // Xóa lỗi khi người dùng nhập lại
                         }}
                         placeholder="VD: 3.5"
-                        className="w-32 rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-50 dark:focus:border-blue-400"
+                        className="w-32"
                       />
-                      <button
+                      <Button
                         onClick={() => {
                           const targetValue = parseFloat(inputTargetGpa);
                           // Validation
@@ -186,16 +211,16 @@ export default function AimPage() {
                           setCalculatedTargetGpa(inputTargetGpa);
                           setValidationError('');
                         }}
-                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        size="sm"
                       >
                         Tính
-                      </button>
-                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
                         (thang điểm 4.0)
                       </span>
                     </div>
                     {validationError && (
-                      <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                      <div className="mt-2 text-sm text-destructive">
                         {validationError}
                       </div>
                     )}
@@ -203,57 +228,57 @@ export default function AimPage() {
                   
                   {/* Hiển thị kết quả tính toán aim */}
                   {aimCalculation && (
-                    <div className="rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 p-4 shadow-sm dark:from-purple-900/20 dark:to-pink-900/20">
-                      <h3 className="mb-3 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                    <div className="rounded-lg border border-border bg-card p-4">
+                      <h3 className="mb-3 text-lg font-semibold text-foreground">
                         Kết quả tính toán
                       </h3>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-zinc-600 dark:text-zinc-400">GPA hiện tại:</span>
-                          <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                          <span className="text-muted-foreground">GPA hiện tại:</span>
+                          <span className="font-medium text-foreground">
                             {aimCalculation.currentGpa.toFixed(2)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-zinc-600 dark:text-zinc-400">Mục tiêu GPA:</span>
-                          <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                          <span className="text-muted-foreground">Mục tiêu GPA:</span>
+                          <span className="font-medium text-foreground">
                             {aimCalculation.targetGpa.toFixed(2)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-zinc-600 dark:text-zinc-400">Tín chỉ đã học:</span>
-                          <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                          <span className="text-muted-foreground">Tín chỉ đã học:</span>
+                          <span className="font-medium text-foreground">
                             {aimCalculation.currentCredits}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-zinc-600 dark:text-zinc-400">Tín chỉ còn lại:</span>
-                          <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                          <span className="text-muted-foreground">Tín chỉ còn lại:</span>
+                          <span className="font-medium text-foreground">
                             {aimCalculation.remainingCredits}
                           </span>
                         </div>
                         
                         {/* Hiển thị thông báo nếu không thể đạt được mục tiêu */}
                         {!aimCalculation.isAchievable && (
-                          <div className="mt-4 rounded-lg bg-gradient-to-r from-red-50 to-orange-50 p-4 dark:from-red-900/20 dark:to-orange-900/20">
+                          <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
                             <div className="flex items-start gap-3">
                               <div className="text-2xl">⚠️</div>
                               <div className="flex-1">
-                                <div className="mb-2 text-lg font-semibold text-red-900 dark:text-red-300">
+                                <div className="mb-2 text-lg font-semibold text-destructive">
                                   Không thể đạt được mục tiêu này
                                 </div>
-                                <div className="space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+                                <div className="space-y-2 text-sm text-foreground">
                                   <p>
                                     Mục tiêu GPA <span className="font-semibold">{aimCalculation.targetGpa.toFixed(2)}</span> vượt quá khả năng có thể đạt được.
                                   </p>
-                                  <div className="rounded-lg bg-white p-3 dark:bg-zinc-800">
+                                  <div className="rounded-lg border border-border bg-card p-3">
                                     <div className="flex items-center justify-between">
-                                      <span className="text-zinc-600 dark:text-zinc-400">GPA tối đa có thể đạt được:</span>
-                                      <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                                      <span className="text-muted-foreground">GPA tối đa có thể đạt được:</span>
+                                      <span className="text-xl font-bold text-primary">
                                         {aimCalculation.maxPossibleGpa?.toFixed(2) || 'N/A'}
                                       </span>
                                     </div>
-                                    <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                                    <div className="mt-2 text-xs text-muted-foreground">
                                       (Khi tất cả các môn còn lại đều đạt điểm A)
                                     </div>
                                   </div>
@@ -270,27 +295,27 @@ export default function AimPage() {
                         
                         {/* Hiển thị chiến lược tối ưu cho từng môn */}
                         {aimCalculation.optimalStrategy && aimCalculation.optimalStrategy.length > 0 && (
-                          <div className="mt-3 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 p-4 dark:from-emerald-900/20 dark:to-teal-900/20">
-                            <div className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                          <div className="mt-3 rounded-lg border border-border bg-card p-4">
+                            <div className="mb-3 text-sm font-semibold text-foreground">
                               ⭐ Chiến lược tối ưu (theo từng môn):
                             </div>
                             <div className="space-y-2">
                               {aimCalculation.optimalStrategy.map((item, index) => (
                                 <div
                                   key={index}
-                                  className="rounded-lg bg-white p-3 dark:bg-zinc-800"
+                                  className="rounded-lg border border-border bg-card p-3"
                                 >
                                   <div className="flex items-center justify-between">
                                     <div className="flex-1">
-                                      <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                                      <div className="font-medium text-foreground">
                                         {item.subjectName}
                                       </div>
-                                      <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                      <div className="mt-1 text-xs text-muted-foreground">
                                         {item.credits} tín chỉ
                                       </div>
                                     </div>
                                     <div className="ml-4 text-right">
-                                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                                      <div className="text-xs text-muted-foreground">
                                         Cần đạt:
                                       </div>
                                       <div
@@ -314,13 +339,13 @@ export default function AimPage() {
                             
                             {/* Hiển thị GPA cuối cùng sau khi áp dụng chiến lược */}
                             {aimCalculation.finalGpaWithOptimal > 0 && (
-                              <div className="mt-4 rounded-lg bg-white p-3 dark:bg-zinc-800">
+                              <div className="mt-4 rounded-lg border border-border bg-card p-3">
                                 <div className="flex items-center justify-between">
                                   <div>
-                                    <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                                    <div className="text-sm font-medium text-muted-foreground">
                                       GPA cuối cùng (sau khi áp dụng chiến lược):
                                     </div>
-                                    <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                    <div className="mt-1 text-xs text-muted-foreground">
                                       Mục tiêu: {aimCalculation.targetGpa.toFixed(2)}
                                     </div>
                                   </div>
@@ -352,22 +377,22 @@ export default function AimPage() {
                         
                         {/* Hiển thị các chiến lược khác */}
                         {aimCalculation.strategies && aimCalculation.strategies.length > 0 && (
-                          <div className="mt-3 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 p-4 dark:from-indigo-900/20 dark:to-purple-900/20">
-                            <div className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                          <div className="mt-3 rounded-lg border border-border bg-card p-4">
+                            <div className="mb-3 text-sm font-semibold text-foreground">
                               Các chiến lược khác:
                             </div>
                             <div className="space-y-3">
                               {aimCalculation.strategies.map((strategy, index) => (
                                 <div
                                   key={index}
-                                  className="rounded-lg bg-white p-3 dark:bg-zinc-800"
+                                  className="rounded-lg border border-border bg-card p-3"
                                 >
                                   <div className="mb-2 flex items-center justify-between">
-                                    <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                                    <div className="font-medium text-foreground">
                                       {strategy.description}
                                     </div>
                                     <div className="text-right">
-                                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                                      <div className="text-xs text-muted-foreground">
                                         GPA cuối:
                                       </div>
                                       <div
@@ -384,13 +409,13 @@ export default function AimPage() {
                                   
                                   {/* Hiển thị chi tiết từng môn */}
                                   {strategy.subjectDetails && strategy.subjectDetails.length > 0 && (
-                                    <div className="mt-2 space-y-1 border-t border-zinc-200 pt-2 dark:border-zinc-700">
+                                    <div className="mt-2 space-y-1 border-t border-border pt-2">
                                       {strategy.subjectDetails.map((subject, subjIndex) => (
                                         <div
                                           key={subjIndex}
                                           className="flex items-center justify-between text-xs"
                                         >
-                                          <span className="text-zinc-600 dark:text-zinc-400">
+                                          <span className="text-muted-foreground">
                                             {subject.name}
                                           </span>
                                           <span
@@ -422,15 +447,14 @@ export default function AimPage() {
               </div>
 
               {!educationProgramLoading && !educationProgramError && incompleteSubjects.length === 0 && (
-                <div className="rounded-lg bg-green-50 p-4 text-center text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-4 text-center text-green-600 dark:text-green-400">
                   🎉 Chúc mừng! Bạn đã hoàn thành tất cả các môn học trong chương trình.
                 </div>
               )}
             </>
           )}
-        </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
 

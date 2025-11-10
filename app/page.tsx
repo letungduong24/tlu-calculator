@@ -6,16 +6,18 @@ import useAuthStore from '@/store/authStore';
 import useStudentStore from '@/store/studentStore';
 import useScheduleStore from '@/store/scheduleStore';
 import dayjs from 'dayjs';
+import { Button } from '@/components/ui/button';
+import { DashboardLayout } from '@/components/dashboard-layout';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const {
     studentData,
     loading,
     error,
     fetchStudentData,
-    clearStudentData,
   } = useStudentStore();
   const {
     scheduleByDate,
@@ -35,109 +37,125 @@ export default function Home() {
   useEffect(() => {
     if (!mounted) return;
     
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-    // Chỉ gọi API nếu chưa có data và không đang loading
-    if (!studentData && !loading) {
+    // Chỉ gọi API nếu đã đăng nhập, chưa có data và không đang loading
+    if (isAuthenticated && !studentData && !loading) {
       fetchStudentData();
     }
-    // Load lịch học từ IDB
+    // Load lịch học từ IDB (không cần đăng nhập)
     if (!scheduleFetched && !scheduleLoading) {
       loadScheduleFromIDB();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, isAuthenticated]);
 
-  const handleLogout = () => {
-    clearStudentData();
-    logout();
-    router.push('/login');
-  };
 
   // Chờ đến khi component mount trên client để tránh hydration mismatch
   if (!mounted) {
     return null;
   }
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
-      <main className="w-full min-h-screen bg-white dark:bg-black">
-        <div className="w-full border-b border-zinc-200 bg-white px-8 py-6 dark:border-zinc-800 dark:bg-zinc-900">
-          <h1 className="text-3xl font-semibold text-black dark:text-zinc-50">
-            Trang chủ
-          </h1>
-        </div>
-        
-        <div className="w-full px-8 py-6 pb-24">
-          {loading && (
-            <div className="rounded-lg bg-blue-50 p-4 text-center text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
-              Đang tải thông tin...
+    <DashboardLayout>
+      <div className="space-y-6">
+          {/* Hiển thị trạng thái đăng nhập */}
+          {!isAuthenticated && (
+            <div className="mb-6 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+              <div className="flex items-center justify-between">
+                <span className="text-foreground">Bạn chưa đăng nhập. Vui lòng đăng nhập để xem thông tin sinh viên và điểm số.</span>
+                <Button
+                  onClick={() => router.push('/login')}
+                  className="ml-4"
+                >
+                  Đăng nhập
+                </Button>
+              </div>
             </div>
           )}
 
-          {error && (
-            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+          {isAuthenticated && loading && (
+            <div className="space-y-6">
+              {/* Skeleton cho thông tin sinh viên */}
+              <div className="rounded-lg border border-border bg-card p-6">
+                <Skeleton className="mb-4 h-6 w-48" />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-5 w-40" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-5 w-36" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isAuthenticated && error && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
               {error}
             </div>
           )}
 
-          {!loading && !error && !studentData && (
-            <div className="rounded-lg bg-yellow-50 p-4 text-sm text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400">
+          {isAuthenticated && !loading && !error && !studentData && (
+            <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
               Chưa có dữ liệu sinh viên. Vui lòng thử lại sau.
             </div>
           )}
 
-          {studentData && !loading && (
+          {isAuthenticated && studentData && !loading && (
             <div className="space-y-6">
               {/* Thông tin sinh viên */}
               {(studentData.studentCode || studentData.fullName || studentData.studentName || studentData.className || studentData.departmentName) && (
-                <div className="rounded-lg bg-zinc-100 p-6 dark:bg-zinc-800">
-                  <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                <div className="rounded-lg border border-border bg-card p-6">
+                  <h3 className="mb-4 text-lg font-semibold text-foreground">
                     Thông tin sinh viên
                   </h3>
                   <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     {studentData.studentCode && (
                       <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="font-medium text-muted-foreground">
                           Mã sinh viên:
                         </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
+                        <span className="text-foreground">
                           {studentData.studentCode}
                         </span>
                       </div>
                     )}
                     {(studentData.fullName || studentData.studentName) && (
                       <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="font-medium text-muted-foreground">
                           Họ tên:
                         </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
+                        <span className="text-foreground">
                           {studentData.fullName || studentData.studentName}
                         </span>
                       </div>
                     )}
                     {studentData.className && (
                       <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="font-medium text-muted-foreground">
                           Lớp:
                         </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
+                        <span className="text-foreground">
                           {studentData.className}
                         </span>
                       </div>
                     )}
                     {studentData.departmentName && (
                       <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="font-medium text-muted-foreground">
                           Khoa:
                         </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
+                        <span className="text-foreground">
                           {studentData.departmentName}
                         </span>
                       </div>
@@ -151,47 +169,47 @@ export default function Home() {
                 studentData.averageMark !== undefined ||
                 studentData.totalCredits !== undefined ||
                 studentData.completedCredits !== undefined) && (
-                <div className="rounded-lg bg-zinc-100 p-6 dark:bg-zinc-800">
-                  <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                <div className="rounded-lg border border-border bg-card p-6">
+                  <h3 className="mb-4 text-lg font-semibold text-foreground">
                     Kết quả học tập
                   </h3>
                   <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     {studentData.gpa !== undefined && (
                       <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="font-medium text-muted-foreground">
                           GPA:
                         </span>{' '}
-                        <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                        <span className="text-lg font-semibold text-foreground">
                           {studentData.gpa.toFixed(2)}
                         </span>
                       </div>
                     )}
                     {studentData.averageMark !== undefined && (
                       <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="font-medium text-muted-foreground">
                           Điểm trung bình:
                         </span>{' '}
-                        <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                        <span className="text-lg font-semibold text-foreground">
                           {studentData.averageMark.toFixed(2)}
                         </span>
                       </div>
                     )}
                     {studentData.totalCredits !== undefined && (
                       <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="font-medium text-muted-foreground">
                           Tổng số tín chỉ:
                         </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
+                        <span className="text-foreground">
                           {studentData.totalCredits}
                         </span>
                       </div>
                     )}
                     {studentData.completedCredits !== undefined && (
                       <div>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="font-medium text-muted-foreground">
                           Số tín chỉ đã tích lũy:
                         </span>{' '}
-                        <span className="text-zinc-900 dark:text-zinc-50">
+                        <span className="text-foreground">
                           {studentData.completedCredits}
                         </span>
                       </div>
@@ -200,52 +218,75 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Lịch học */}
-              <div className="rounded-lg bg-zinc-100 p-6 dark:bg-zinc-800">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                    Lịch học
-                  </h3>
-                  <button
-                    onClick={fetchSchedule}
-                    disabled={scheduleLoading}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
-                  >
-                    {scheduleLoading ? 'Đang tải...' : 'Tải lịch học'}
-                  </button>
-                </div>
+            </div>
+          )}
+
+          {/* Lịch học - Hiển thị cho tất cả người dùng */}
+          <div className="rounded-lg border border-border bg-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">
+                Lịch học
+              </h3>
+              {isAuthenticated && (
+                <Button
+                  onClick={fetchSchedule}
+                  disabled={scheduleLoading}
+                  size="sm"
+                >
+                  {scheduleLoading ? 'Đang tải...' : 'Tải lịch học'}
+                </Button>
+              )}
+              {!isAuthenticated && (
+                <span className="text-sm text-muted-foreground">
+                  Đăng nhập để tải lịch học mới nhất
+                </span>
+              )}
+            </div>
                 
                 {/* Tabs */}
-                <div className="mb-4 flex gap-2 border-b border-zinc-300 dark:border-zinc-700">
-                  <button
+                <div className="mb-4 flex gap-2 border-b border-border">
+                  <Button
                     onClick={() => setActiveTab('today')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      activeTab === 'today'
-                        ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
-                        : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50'
+                    variant="ghost"
+                    size="sm"
+                    className={`rounded-none border-b-2 -mb-px ${
+                      activeTab === 'today' 
+                        ? 'border-primary text-foreground font-medium' 
+                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50'
                     }`}
                   >
                     Hôm nay
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => setActiveTab('all')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      activeTab === 'all'
-                        ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
-                        : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50'
+                    variant="ghost"
+                    size="sm"
+                    className={`rounded-none border-b-2 -mb-px ${
+                      activeTab === 'all' 
+                        ? 'border-primary text-foreground font-medium' 
+                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50'
                     }`}
                   >
                     Tất cả các ngày
-                  </button>
+                  </Button>
                 </div>
 
                 {scheduleLoading && (
-                  <div className="rounded-lg bg-blue-50 p-4 text-center text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
-                    Đang tải lịch học...
+                  <div className="space-y-4">
+                    <Skeleton className="h-6 w-32" />
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-border bg-card p-4">
+                        <Skeleton className="mb-3 h-5 w-40" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-20 w-full" />
+                          <Skeleton className="h-20 w-full" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
                 {scheduleError && (
-                  <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
                     {scheduleError}
                   </div>
                 )}
@@ -258,7 +299,7 @@ export default function Home() {
                   
                   if (displaySchedule.length === 0) {
                     return (
-                      <div className="rounded-lg bg-yellow-50 p-4 text-sm text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400">
+                      <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
                         {activeTab === 'today' ? 'Hôm nay không có lịch học.' : 'Chưa có lịch học.'}
                       </div>
                     );
@@ -282,10 +323,10 @@ export default function Home() {
                         return (
                           <div
                             key={dateIndex}
-                            className="rounded-lg border border-zinc-300 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
+                            className="rounded-lg border border-border bg-card p-4"
                           >
-                            <div className="mb-3 border-b border-zinc-200 pb-2 dark:border-zinc-700">
-                              <h4 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                            <div className="mb-3 border-b border-border pb-2">
+                              <h4 className="text-lg font-semibold text-foreground">
                                 {dayName}, {dateGroup.date}
                               </h4>
                             </div>
@@ -293,29 +334,29 @@ export default function Home() {
                               {dateGroup.items.map((item, itemIndex) => (
                                 <div
                                   key={itemIndex}
-                                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800"
+                                  className="rounded-lg border border-border bg-muted p-3"
                                 >
                                   <div className="mb-2">
-                                    <h5 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                                    <h5 className="text-base font-semibold text-foreground">
                                       {item.subjectName}
                                     </h5>
                                   </div>
                                   <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                                    <div className="flex items-center text-zinc-700 dark:text-zinc-300">
+                                    <div className="flex items-center text-muted-foreground">
                                       <span className="font-medium">Thời gian:</span>
-                                      <span className="ml-2 text-zinc-900 dark:text-zinc-50">
+                                      <span className="ml-2 text-foreground">
                                         {item.startTime} - {item.endTime}
                                       </span>
                                     </div>
-                                    <div className="flex items-center text-zinc-700 dark:text-zinc-300">
+                                    <div className="flex items-center text-muted-foreground">
                                       <span className="font-medium">Tiết:</span>
-                                      <span className="ml-2 text-zinc-900 dark:text-zinc-50">
+                                      <span className="ml-2 text-foreground">
                                         Tiết {item.startPeriod} - Tiết {item.endPeriod}
                                       </span>
                                     </div>
-                                    <div className="flex items-center text-zinc-700 dark:text-zinc-300">
+                                    <div className="flex items-center text-muted-foreground">
                                       <span className="font-medium">Phòng:</span>
-                                      <span className="ml-2 text-zinc-900 dark:text-zinc-50">
+                                      <span className="ml-2 text-foreground">
                                         {item.room}
                                       </span>
                                     </div>
@@ -329,98 +370,67 @@ export default function Home() {
                     </div>
                   );
                 })()}
+          </div>
+
+          {/* Danh sách điểm môn học - Chỉ hiển thị khi đã đăng nhập */}
+          {isAuthenticated && studentData && studentData.summaryMarks &&
+            studentData.summaryMarks.length > 0 && (
+              <div className="rounded-lg border border-border bg-card p-6">
+                <h3 className="mb-4 text-lg font-semibold text-foreground">
+                  Điểm chi tiết các môn học
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="px-4 py-2 text-left font-medium text-muted-foreground">
+                          Mã môn
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-muted-foreground">
+                          Tên môn học
+                        </th>
+                        <th className="px-4 py-2 text-center font-medium text-muted-foreground">
+                          Tín chỉ
+                        </th>
+                        <th className="px-4 py-2 text-center font-medium text-muted-foreground">
+                          Điểm
+                        </th>
+                        <th className="px-4 py-2 text-center font-medium text-muted-foreground">
+                          Điểm chữ
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {studentData.summaryMarks.map((mark, index) => (
+                        <tr
+                          key={index}
+                          className="border-b border-border"
+                        >
+                          <td className="px-4 py-2 text-foreground">
+                            {mark.subjectCode || '-'}
+                          </td>
+                          <td className="px-4 py-2 text-foreground">
+                            {mark.subjectName || '-'}
+                          </td>
+                          <td className="px-4 py-2 text-center text-foreground">
+                            {mark.credit !== undefined ? mark.credit : '-'}
+                          </td>
+                          <td className="px-4 py-2 text-center text-foreground">
+                            {mark.mark !== undefined
+                              ? mark.mark.toFixed(2)
+                              : '-'}
+                          </td>
+                          <td className="px-4 py-2 text-center text-foreground">
+                            {mark.grade || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-
-              {/* Danh sách điểm môn học */}
-              {studentData.summaryMarks &&
-                studentData.summaryMarks.length > 0 && (
-                  <div className="rounded-lg bg-zinc-100 p-6 dark:bg-zinc-800">
-                    <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                      Điểm chi tiết các môn học
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-zinc-300 dark:border-zinc-600">
-                            <th className="px-4 py-2 text-left font-medium text-zinc-700 dark:text-zinc-300">
-                              Mã môn
-                            </th>
-                            <th className="px-4 py-2 text-left font-medium text-zinc-700 dark:text-zinc-300">
-                              Tên môn học
-                            </th>
-                            <th className="px-4 py-2 text-center font-medium text-zinc-700 dark:text-zinc-300">
-                              Tín chỉ
-                            </th>
-                            <th className="px-4 py-2 text-center font-medium text-zinc-700 dark:text-zinc-300">
-                              Điểm
-                            </th>
-                            <th className="px-4 py-2 text-center font-medium text-zinc-700 dark:text-zinc-300">
-                              Điểm chữ
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {studentData.summaryMarks.map((mark, index) => (
-                            <tr
-                              key={index}
-                              className="border-b border-zinc-200 dark:border-zinc-700"
-                            >
-                              <td className="px-4 py-2 text-zinc-900 dark:text-zinc-50">
-                                {mark.subjectCode || '-'}
-                              </td>
-                              <td className="px-4 py-2 text-zinc-900 dark:text-zinc-50">
-                                {mark.subjectName || '-'}
-                              </td>
-                              <td className="px-4 py-2 text-center text-zinc-900 dark:text-zinc-50">
-                                {mark.credit !== undefined ? mark.credit : '-'}
-                              </td>
-                              <td className="px-4 py-2 text-center text-zinc-900 dark:text-zinc-50">
-                                {mark.mark !== undefined
-                                  ? mark.mark.toFixed(2)
-                                  : '-'}
-                              </td>
-                              <td className="px-4 py-2 text-center text-zinc-900 dark:text-zinc-50">
-                                {mark.grade || '-'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-            </div>
-          )}
-        </div>
-
-        {/* Menu ở dưới */}
-        <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-200 bg-white px-8 py-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="mx-auto flex max-w-7xl items-center justify-center gap-4">
-            <button
-              onClick={() => {
-                router.push('/grade');
-              }}
-              className="flex h-12 items-center justify-center rounded-lg bg-blue-600 px-6 text-base font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              Xem điểm
-            </button>
-            <button
-              onClick={() => {
-                router.push('/aim');
-              }}
-              className="flex h-12 items-center justify-center rounded-lg bg-green-600 px-6 text-base font-medium text-white transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-            >
-              Tính GPA mục tiêu
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex h-12 items-center justify-center rounded-lg bg-red-600 px-6 text-base font-medium text-white transition-colors hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-            >
-              Đăng xuất
-            </button>
-        </div>
-        </div>
-      </main>
-    </div>
+            )}
+      </div>
+    </DashboardLayout>
   );
 }
