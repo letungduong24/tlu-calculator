@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Sidebar,
@@ -21,6 +22,8 @@ import useAuthStore from '@/store/authStore';
 import useStudentStore from '@/store/studentStore';
 import useLoginDialogStore from '@/store/loginDialogStore';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -30,8 +33,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
-  const { clearStudentData } = useStudentStore();
+  const { clearStudentData, studentData, loading: studentLoading, fetchStudentData } = useStudentStore();
   const { openLoginDialog } = useLoginDialogStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
+    // Fetch student data nếu đã đăng nhập, chưa có data và không đang loading
+    if (isAuthenticated && !studentData && !studentLoading) {
+      fetchStudentData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, isAuthenticated]);
 
   const handleLogout = () => {
     clearStudentData();
@@ -150,15 +168,49 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex flex-1 items-center gap-2">
             <h1 className="text-lg font-semibold text-foreground">
               {pathname === '/' && 'Trang chủ'}
+              {pathname === '/student' && 'Thông tin sinh viên'}
               {pathname === '/grade' && 'Xem điểm'}
               {pathname === '/aim' && 'Tính GPA mục tiêu'}
               {pathname === '/info' && 'Thông tin'}
               {pathname === '/login' && 'Đăng nhập'}
             </h1>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            {isAuthenticated && (
+              <>
+                {studentLoading && !studentData ? (
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <Skeleton className="h-4 w-24 hidden sm:block" />
+                  </div>
+                ) : studentData ? (
+                  <button
+                    onClick={() => router.push('/student')}
+                    className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+                    aria-label="Xem thông tin sinh viên"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src="" alt={studentData.fullName || studentData.studentName || 'Student'} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {(studentData.fullName || studentData.studentName || 'S')
+                          .split(' ')
+                          .map(n => n[0])
+                          .join('')
+                          .toUpperCase()
+                          .slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium text-foreground hidden sm:inline-block">
+                      {studentData.fullName || studentData.studentName || 'Sinh viên'}
+                    </span>
+                  </button>
+                ) : null}
+              </>
+            )}
+            <ThemeToggle />
+          </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+        <div className="flex flex-1 flex-col gap-4 p-4 md:p-6 min-w-0 overflow-x-hidden">
           {children}
         </div>
       </SidebarInset>

@@ -8,6 +8,7 @@ import { calculateAimPageData } from '@/lib/services/aimService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -58,6 +59,30 @@ export default function AimPage() {
       calculatedTargetGpa
     );
   }, [educationProgram, subjectMarks, calculatedTargetGpa]);
+
+  // Hàm xử lý tính toán GPA
+  const handleCalculate = () => {
+    const targetValue = parseFloat(inputTargetGpa);
+    // Validation
+    if (!inputTargetGpa || isNaN(targetValue)) {
+      setValidationError('Vui lòng nhập mục tiêu GPA hợp lệ');
+      return;
+    }
+    if (targetValue < 0 || targetValue > 4) {
+      setValidationError('GPA phải nằm trong khoảng 0 - 4.0');
+      return;
+    }
+    // So sánh với độ chính xác 2 chữ số thập phân để tránh lỗi floating point
+    const currentGpaRounded = Math.round(gpa * 100) / 100;
+    const targetValueRounded = Math.round(targetValue * 100) / 100;
+    if (targetValueRounded <= currentGpaRounded) {
+      setValidationError(`Mục tiêu GPA phải lớn hơn GPA hiện tại (${gpa.toFixed(2)})`);
+      return;
+    }
+    // Nếu hợp lệ, tính toán
+    setCalculatedTargetGpa(inputTargetGpa);
+    setValidationError('');
+  };
 
   if (!mounted) {
     return null;
@@ -120,115 +145,94 @@ export default function AimPage() {
           {!educationProgramLoading && !educationProgramError && (
             <>
               {/* Hiển thị số tín chỉ */}
-              <div className="mb-6 rounded-lg border border-border bg-card p-6">
-                <h2 className="mb-4 text-2xl font-semibold text-foreground">
-                  Tổng quan
-                </h2>
-                
-                <div className="space-y-4">
-                  <div className="rounded-lg border border-border bg-card p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-medium text-muted-foreground">
-                        Tín chỉ đã học / Tổng số tín chỉ:
-                      </span>
-                      <span className="text-3xl font-bold text-primary">
-                        {passedCredits} / {totalCredits}
-                      </span>
-                    </div>
-                    <div className="mt-4">
-                      <div className="mb-2 flex items-center justify-between text-sm text-muted-foreground">
-                        <span>Tiến độ hoàn thành</span>
-                        <span>
-                          {totalCredits > 0 
-                            ? ((passedCredits / totalCredits) * 100).toFixed(1)
-                            : 0}%
-                        </span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full bg-primary transition-all duration-300"
-                          style={{
-                            width: `${totalCredits > 0 ? (passedCredits / totalCredits) * 100 : 0}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-lg font-medium text-foreground">
+                    Tín chỉ đã học / Tổng số tín chỉ
+                  </span>
+                  <Badge variant="default" className="text-base px-3 py-1">
+                    {passedCredits} / {totalCredits}
+                  </Badge>
+                </div>
+                <div className="mt-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Tiến độ hoàn thành</span>
+                    <Badge variant="secondary" className="text-sm px-2.5 py-1">
+                      {totalCredits > 0 
+                        ? ((passedCredits / totalCredits) * 100).toFixed(1)
+                        : 0}%
+                    </Badge>
                   </div>
-                  
-                  <div className="rounded-lg border border-border bg-card p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-medium text-muted-foreground">
-                        GPA (điểm trung bình):
-                      </span>
-                      <span className="text-3xl font-bold text-green-600 dark:text-green-400">
-                        {gpa.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-sm text-muted-foreground">
-                      Tính từ các môn đã hoàn thành (thang điểm 4.0)
-                    </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{
+                        width: `${totalCredits > 0 ? (passedCredits / totalCredits) * 100 : 0}%`,
+                      }}
+                    />
                   </div>
-                  
-                  {/* Input để đặt aim GPA */}
-                  <div className="rounded-lg border border-border bg-card p-4">
-                    <Label className="mb-2">
-                      Đặt mục tiêu GPA:
-                    </Label>
-                    <div className="flex items-center gap-3">
-                      <Input
-                        type="number"
-                        min="0"
-                        max="4"
-                        step="0.1"
-                        value={inputTargetGpa}
-                        onChange={(e) => {
-                          setInputTargetGpa(e.target.value);
-                          setValidationError(''); // Xóa lỗi khi người dùng nhập lại
-                        }}
-                        placeholder="VD: 3.5"
-                        className="w-32"
-                      />
-                      <Button
-                        onClick={() => {
-                          const targetValue = parseFloat(inputTargetGpa);
-                          // Validation
-                          if (!inputTargetGpa || isNaN(targetValue)) {
-                            setValidationError('Vui lòng nhập mục tiêu GPA hợp lệ');
-                            return;
-                          }
-                          if (targetValue < 0 || targetValue > 4) {
-                            setValidationError('GPA phải nằm trong khoảng 0 - 4.0');
-                            return;
-                          }
-                          // So sánh với độ chính xác 2 chữ số thập phân để tránh lỗi floating point
-                          const currentGpaRounded = Math.round(gpa * 100) / 100;
-                          const targetValueRounded = Math.round(targetValue * 100) / 100;
-                          if (targetValueRounded <= currentGpaRounded) {
-                            setValidationError(`Mục tiêu GPA phải lớn hơn GPA hiện tại (${gpa.toFixed(2)})`);
-                            return;
-                          }
-                          // Nếu hợp lệ, tính toán
-                          setCalculatedTargetGpa(inputTargetGpa);
-                          setValidationError('');
-                        }}
-                        size="sm"
-                      >
-                        Tính
-                      </Button>
-                      <span className="text-sm text-muted-foreground">
-                        (thang điểm 4.0)
-                      </span>
-                    </div>
-                    {validationError && (
-                      <div className="mt-2 text-sm text-destructive">
-                        {validationError}
-                      </div>
-                    )}
+                </div>
+              </div>
+              
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-lg font-medium text-foreground">
+                    GPA toàn khóa hiện tại
+                  </span>
+                  <Badge variant="default" className="text-base px-3 py-1">
+                    {gpa.toFixed(2)}
+                  </Badge>
+                </div>
+                <div className="mt-2 text-sm text-muted-foreground">
+                  Tính từ các môn đã hoàn thành (thang điểm 4.0)
+                </div>
+              </div>
+              
+              {/* Input để đặt aim GPA */}
+              <div className="rounded-lg border border-border bg-card p-4">
+                <Label className="mb-2 text-lg font-medium text-foreground">
+                  Đặt mục tiêu GPA:
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="4"
+                    step="0.1"
+                    value={inputTargetGpa}
+                    onChange={(e) => {
+                      setInputTargetGpa(e.target.value);
+                      setValidationError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCalculate();
+                      }
+                    }}
+                    placeholder="VD: 3.5"
+                    className="w-32"
+                  />
+                  <Button
+                    onClick={handleCalculate}
+                    size="sm"
+                  >
+                    Tính
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    (thang điểm 4.0)
+                  </span>
+                </div>
+                {validationError && (
+                  <div className="mt-2 text-sm text-destructive">
+                    {validationError}
                   </div>
-                  
-                  {/* Hiển thị kết quả tính toán aim */}
-                  {aimCalculation && (
-                    <div className="rounded-lg border border-border bg-card p-4">
+                )}
+              </div>
+              
+              {/* Hiển thị kết quả tính toán aim */}
+              {aimCalculation && (
+                <div className="rounded-lg border border-border bg-card p-4">
                       <h3 className="mb-3 text-lg font-semibold text-foreground">
                         Kết quả tính toán
                       </h3>
@@ -262,7 +266,6 @@ export default function AimPage() {
                         {!aimCalculation.isAchievable && (
                           <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
                             <div className="flex items-start gap-3">
-                              <div className="text-2xl">⚠️</div>
                               <div className="flex-1">
                                 <div className="mb-2 text-lg font-semibold text-destructive">
                                   Không thể đạt được mục tiêu này
@@ -272,13 +275,13 @@ export default function AimPage() {
                                     Mục tiêu GPA <span className="font-semibold">{aimCalculation.targetGpa.toFixed(2)}</span> vượt quá khả năng có thể đạt được.
                                   </p>
                                   <div className="rounded-lg border border-border bg-card p-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-muted-foreground">GPA tối đa có thể đạt được:</span>
-                                      <span className="text-xl font-bold text-primary">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                      <span className="text-muted-foreground">GPA tối đa có thể đạt được</span>
+                                      <Badge variant="default" className="text-base px-3 py-1">
                                         {aimCalculation.maxPossibleGpa?.toFixed(2) || 'N/A'}
-                                      </span>
+                                      </Badge>
                                     </div>
-                                    <div className="mt-2 text-xs text-muted-foreground">
+                                    <div className="mt-1 text-xs text-muted-foreground">
                                       (Khi tất cả các môn còn lại đều đạt điểm A)
                                     </div>
                                   </div>
@@ -297,40 +300,38 @@ export default function AimPage() {
                         {aimCalculation.optimalStrategy && aimCalculation.optimalStrategy.length > 0 && (
                           <div className="mt-3 rounded-lg border border-border bg-card p-4">
                             <div className="mb-3 text-sm font-semibold text-foreground">
-                              ⭐ Chiến lược tối ưu (theo từng môn):
+                                Chiến lược tối ưu:
                             </div>
                             <div className="space-y-2">
                               {aimCalculation.optimalStrategy.map((item, index) => (
                                 <div
                                   key={index}
-                                  className="rounded-lg border border-border bg-card p-3"
+                                  className="rounded-lg bg-muted p-3"
                                 >
-                                  <div className="flex items-center justify-between">
+                                  <div className="flex items-center justify-between gap-3">
                                     <div className="flex-1">
                                       <div className="font-medium text-foreground">
                                         {item.subjectName}
                                       </div>
-                                      <div className="mt-1 text-xs text-muted-foreground">
-                                        {item.credits} tín chỉ
-                                      </div>
                                     </div>
-                                    <div className="ml-4 text-right">
-                                      <div className="text-xs text-muted-foreground">
-                                        Cần đạt:
-                                      </div>
-                                      <div
-                                        className={`text-xl font-bold ${
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="secondary" className="text-sm px-2.5 py-1">
+                                        {item.credits} tín chỉ
+                                      </Badge>
+                                      <Badge
+                                        variant="default"
+                                        className={`text-sm px-2.5 py-1 ${
                                           item.requiredMark4 >= 3.5
-                                            ? 'text-green-600 dark:text-green-400'
+                                            ? 'bg-green-600 text-white dark:bg-green-500'
                                             : item.requiredMark4 >= 2.5
-                                            ? 'text-blue-600 dark:text-blue-400'
+                                            ? 'bg-blue-600 text-white dark:bg-blue-500'
                                             : item.requiredMark4 >= 1.5
-                                            ? 'text-orange-600 dark:text-orange-400'
-                                            : 'text-red-600 dark:text-red-400'
+                                            ? 'bg-orange-600 text-white dark:bg-orange-500'
+                                            : 'bg-red-600 text-white dark:bg-red-500'
                                         }`}
                                       >
                                         {item.requiredGrade}
-                                      </div>
+                                      </Badge>
                                     </div>
                                   </div>
                                 </div>
@@ -339,36 +340,21 @@ export default function AimPage() {
                             
                             {/* Hiển thị GPA cuối cùng sau khi áp dụng chiến lược */}
                             {aimCalculation.finalGpaWithOptimal > 0 && (
-                              <div className="mt-4 rounded-lg border border-border bg-card p-3">
+                              <div className="mt-4 rounded-lg border border-border bg-muted p-3">
                                 <div className="flex items-center justify-between">
-                                  <div>
-                                    <div className="text-sm font-medium text-muted-foreground">
-                                      GPA cuối cùng (sau khi áp dụng chiến lược):
-                                    </div>
-                                    <div className="mt-1 text-xs text-muted-foreground">
-                                      Mục tiêu: {aimCalculation.targetGpa.toFixed(2)}
-                                    </div>
+                                  <div className="text-sm font-medium text-foreground">
+                                    GPA cuối cùng (sau khi áp dụng chiến lược):
                                   </div>
-                                  <div className="text-right">
-                                    <div
-                                      className={`text-2xl font-bold ${
-                                        aimCalculation.finalGpaWithOptimal >= aimCalculation.targetGpa
-                                          ? 'text-green-600 dark:text-green-400'
-                                          : 'text-orange-600 dark:text-orange-400'
-                                      }`}
-                                    >
-                                      {aimCalculation.finalGpaWithOptimal.toFixed(2)}
-                                    </div>
-                                    {aimCalculation.finalGpaWithOptimal >= aimCalculation.targetGpa ? (
-                                      <div className="mt-1 text-xs text-green-600 dark:text-green-400">
-                                        ✓ Đạt mục tiêu
-                                      </div>
-                                    ) : (
-                                      <div className="mt-1 text-xs text-orange-600 dark:text-orange-400">
-                                        ⚠ Thiếu {(aimCalculation.targetGpa - aimCalculation.finalGpaWithOptimal).toFixed(2)} điểm
-                                      </div>
-                                    )}
-                                  </div>
+                                  <Badge
+                                    variant="default"
+                                    className={`text-base px-3 py-1 ${
+                                      aimCalculation.finalGpaWithOptimal >= aimCalculation.targetGpa
+                                        ? 'bg-green-600 text-white dark:bg-green-500'
+                                        : 'bg-orange-600 text-white dark:bg-orange-500'
+                                    }`}
+                                  >
+                                    {aimCalculation.finalGpaWithOptimal.toFixed(2)}
+                                  </Badge>
                                 </div>
                               </div>
                             )}
@@ -385,52 +371,49 @@ export default function AimPage() {
                               {aimCalculation.strategies.map((strategy, index) => (
                                 <div
                                   key={index}
-                                  className="rounded-lg border border-border bg-card p-3"
+                                  className="rounded-lg bg-muted p-3"
                                 >
-                                  <div className="mb-2 flex items-center justify-between">
+                                  <div className="mb-2 flex items-center justify-between gap-3">
                                     <div className="font-medium text-foreground">
                                       {strategy.description}
                                     </div>
-                                    <div className="text-right">
-                                      <div className="text-xs text-muted-foreground">
-                                        GPA cuối:
-                                      </div>
-                                      <div
-                                        className={`text-lg font-bold ${
-                                          strategy.gpa >= aimCalculation.targetGpa
-                                            ? 'text-green-600 dark:text-green-400'
-                                            : 'text-orange-600 dark:text-orange-400'
-                                        }`}
-                                      >
-                                        {strategy.gpa.toFixed(2)}
-                                      </div>
-                                    </div>
+                                    <Badge
+                                      variant="default"
+                                      className={`text-sm px-2.5 py-1 ${
+                                        strategy.gpa >= aimCalculation.targetGpa
+                                          ? 'bg-green-600 text-white dark:bg-green-500'
+                                          : 'bg-orange-600 text-white dark:bg-orange-500'
+                                      }`}
+                                    >
+                                      {strategy.gpa.toFixed(2)}
+                                    </Badge>
                                   </div>
                                   
                                   {/* Hiển thị chi tiết từng môn */}
                                   {strategy.subjectDetails && strategy.subjectDetails.length > 0 && (
-                                    <div className="mt-2 space-y-1 border-t border-border pt-2">
+                                    <div className="mt-2 space-y-2 pt-2 border-t border-border">
                                       {strategy.subjectDetails.map((subject, subjIndex) => (
                                         <div
                                           key={subjIndex}
-                                          className="flex items-center justify-between text-xs"
+                                          className="flex items-center justify-between gap-2"
                                         >
-                                          <span className="text-muted-foreground">
+                                          <span className="text-xs text-muted-foreground">
                                             {subject.name}
                                           </span>
-                                          <span
-                                            className={`font-medium ${
+                                          <Badge
+                                            variant="default"
+                                            className={`text-xs px-2 py-0.5 ${
                                               subject.mark4 >= 3.5
-                                                ? 'text-green-600 dark:text-green-400'
+                                                ? 'bg-green-600 text-white dark:bg-green-500'
                                                 : subject.mark4 >= 2.5
-                                                ? 'text-blue-600 dark:text-blue-400'
+                                                ? 'bg-blue-600 text-white dark:bg-blue-500'
                                                 : subject.mark4 >= 1.5
-                                                ? 'text-orange-600 dark:text-orange-400'
-                                                : 'text-red-600 dark:text-red-400'
+                                                ? 'bg-orange-600 text-white dark:bg-orange-500'
+                                                : 'bg-red-600 text-white dark:bg-red-500'
                                             }`}
                                           >
                                             {subject.grade}
-                                          </span>
+                                          </Badge>
                                         </div>
                                       ))}
                                     </div>
@@ -443,8 +426,6 @@ export default function AimPage() {
                       </div>
                     </div>
                   )}
-                </div>
-              </div>
 
               {!educationProgramLoading && !educationProgramError && incompleteSubjects.length === 0 && (
                 <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-4 text-center text-green-600 dark:text-green-400">

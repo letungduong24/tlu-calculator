@@ -93,9 +93,9 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-4 max-w-full">
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded-md border max-w-full">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

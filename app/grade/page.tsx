@@ -12,12 +12,26 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { X, ArrowUpDown, Filter, Search } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import { Filter, Search, LayoutGrid, Table as TableIcon } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { DataTable } from '@/components/data-table';
 import { ColumnDef } from '@tanstack/react-table';
-import { Input } from '@/components/ui/input';
 
 export default function GradePage() {
   const router = useRouter();
@@ -52,10 +66,13 @@ export default function GradePage() {
     }
   }, [mounted, isAuthenticated]);
 
-  // State cho modal hiển thị môn học theo kỳ
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // State cho dialog hiển thị môn học theo kỳ
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSemesterMarks, setSelectedSemesterMarks] = useState<SubjectMark[]>([]);
   const [selectedSemesterName, setSelectedSemesterName] = useState<string>('');
+
+  // State cho view mode (table hoặc card)
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
 
   // Định nghĩa columns cho data table
   const columns: ColumnDef<SubjectMark>[] = useMemo(() => [
@@ -69,38 +86,19 @@ export default function GradePage() {
     },
     {
       accessorKey: 'subjectName',
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="h-8 px-2 hover:bg-transparent"
-          >
-            Tên môn học
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        );
-      },
+      header: 'Tên môn học',
       cell: ({ row }) => {
-        return <div>{row.getValue('subjectName') || '-'}</div>;
+        const subjectName = row.getValue('subjectName') as string | undefined;
+        return (
+          <div className="max-w-[200px] truncate" title={subjectName}>
+            {subjectName || '-'}
+          </div>
+        );
       },
     },
     {
       accessorKey: 'credits',
-      header: ({ column }) => {
-        return (
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-              className="h-8 px-2 hover:bg-transparent"
-            >
-              Tín chỉ
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        );
-      },
+      header: () => <div className="text-center">Tín chỉ</div>,
       cell: ({ row }) => {
         const credits = row.getValue('credits') as number | undefined;
         return <div className="text-center">{credits !== undefined ? credits : '-'}</div>;
@@ -108,20 +106,7 @@ export default function GradePage() {
     },
     {
       accessorKey: 'isCounted',
-      header: ({ column }) => {
-        return (
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-              className="h-8 px-2 hover:bg-transparent"
-            >
-              Môn tính điểm
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        );
-      },
+      header: () => <div className="text-center">Môn tính điểm</div>,
       cell: ({ row }) => {
         const isCounted = row.getValue('isCounted') as boolean | undefined;
         return (
@@ -137,20 +122,7 @@ export default function GradePage() {
     },
     {
       accessorKey: 'processMark',
-      header: ({ column }) => {
-        return (
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-              className="h-8 px-2 hover:bg-transparent"
-            >
-              Điểm quá trình
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        );
-      },
+      header: () => <div className="text-center">Điểm quá trình</div>,
       cell: ({ row }) => {
         const mark = row.getValue('processMark') as number | undefined;
         return <div className="text-center">{mark !== undefined ? mark.toFixed(2) : '-'}</div>;
@@ -158,20 +130,7 @@ export default function GradePage() {
     },
     {
       accessorKey: 'examMark',
-      header: ({ column }) => {
-        return (
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-              className="h-8 px-2 hover:bg-transparent"
-            >
-              Điểm thi
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        );
-      },
+      header: () => <div className="text-center">Điểm thi</div>,
       cell: ({ row }) => {
         const mark = row.getValue('examMark') as number | undefined;
         return <div className="text-center">{mark !== undefined ? mark.toFixed(2) : '-'}</div>;
@@ -179,20 +138,7 @@ export default function GradePage() {
     },
     {
       accessorKey: 'totalMark',
-      header: ({ column }) => {
-        return (
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-              className="h-8 px-2 hover:bg-transparent"
-            >
-              Tổng điểm
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        );
-      },
+      header: () => <div className="text-center">Tổng điểm</div>,
       cell: ({ row }) => {
         const mark = row.getValue('totalMark') as number | undefined;
         return <div className="text-center font-semibold">{mark !== undefined ? mark.toFixed(2) : '-'}</div>;
@@ -200,20 +146,7 @@ export default function GradePage() {
     },
     {
       accessorKey: 'letterGrade',
-      header: ({ column }) => {
-        return (
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-              className="h-8 px-2 hover:bg-transparent"
-            >
-              Điểm chữ
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        );
-      },
+      header: () => <div className="text-center">Điểm chữ</div>,
       cell: ({ row }) => {
         const grade = row.getValue('letterGrade') as string | undefined;
         return <div className="text-center font-semibold">{grade || '-'}</div>;
@@ -221,8 +154,8 @@ export default function GradePage() {
     },
   ], []);
 
-  // Lọc dữ liệu theo filters
-  const filteredMarks = useMemo(() => {
+  // Lọc dữ liệu
+  const filteredAndSortedMarks = useMemo(() => {
     return subjectMarks.filter((mark) => {
       // Filter theo pass status
       if (marksFilters.passStatus !== 'all') {
@@ -268,9 +201,31 @@ export default function GradePage() {
         }
       }
 
+      // Filter theo search query
+      if (marksSearchQuery) {
+        const search = marksSearchQuery.toLowerCase().trim();
+        const subjectName = String(mark.subjectName || '').toLowerCase();
+        const letterGrade = String(mark.letterGrade || '').toLowerCase();
+        const semesterCode = String(mark.semesterCode || '').toLowerCase();
+        const semesterName = String(mark.semesterName || '').toLowerCase();
+        const credits = String(mark.credits || '').toLowerCase();
+        const totalMark = String(mark.totalMark || '').toLowerCase();
+        
+        if (
+          !subjectName.includes(search) &&
+          !letterGrade.includes(search) &&
+          !semesterCode.includes(search) &&
+          !semesterName.includes(search) &&
+          !credits.includes(search) &&
+          !totalMark.includes(search)
+        ) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [subjectMarks, marksFilters]);
+  }, [subjectMarks, marksFilters, marksSearchQuery]);
 
   // Tính GPA trung bình toàn khóa và theo từng năm học
   const { overallGPA, yearGPAs } = useMemo(() => {
@@ -320,7 +275,7 @@ export default function GradePage() {
             <Filter className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[calc(100vw-2rem)] max-w-96 max-h-[80vh] overflow-y-auto" align="start">
+        <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto" align="start">
           <div className="space-y-4">
             <div>
               <h4 className="font-medium text-sm mb-4">Bộ lọc</h4>
@@ -506,7 +461,7 @@ export default function GradePage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 overflow-x-hidden">
+      <div className="space-y-6">
           {marksLoading && (
             <div className="space-y-6">
               {/* Skeleton cho GPA */}
@@ -535,33 +490,45 @@ export default function GradePage() {
               
               {/* Skeleton cho bảng điểm */}
               <div className="rounded-lg border border-border bg-card p-4 md:p-6">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="px-4 py-3"><Skeleton className="h-4 w-8" /></th>
-                        <th className="px-4 py-3"><Skeleton className="h-4 w-24" /></th>
-                        <th className="px-4 py-3"><Skeleton className="h-4 w-16" /></th>
-                        <th className="px-4 py-3"><Skeleton className="h-4 w-20" /></th>
-                        <th className="px-4 py-3"><Skeleton className="h-4 w-16" /></th>
-                        <th className="px-4 py-3"><Skeleton className="h-4 w-20" /></th>
-                        <th className="px-4 py-3"><Skeleton className="h-4 w-16" /></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <tr key={i} className="border-b border-border">
-                          <td className="px-4 py-3"><Skeleton className="h-4 w-4" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-4 w-8 mx-auto" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-4 w-12 mx-auto" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-4 w-12 mx-auto" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-4 w-12 mx-auto" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-4 w-8 mx-auto" /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <Skeleton className="mb-4 h-7 w-48" />
+                <div className="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <Skeleton className="h-10 flex-1" />
+                  <Skeleton className="h-10 w-10" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Card key={i}>
+                      <CardHeader className="pb-3">
+                        <Skeleton className="h-5 w-full" />
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-8" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-4 w-4" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Skeleton className="h-4 w-28" />
+                          <Skeleton className="h-4 w-12" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-12" />
+                        </div>
+                        <div className="pt-2 border-t border-border flex items-center justify-between">
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-5 w-16" />
+                        </div>
+                        <div className="pt-2 border-t border-border flex items-center justify-between">
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-6 w-8" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </div>
             </div>
@@ -581,57 +548,54 @@ export default function GradePage() {
 
           {/* Phần tính GPA */}
           {!marksLoading && !marksError && subjectMarks.length > 0 && (
-            <div className="mb-6 rounded-lg border border-border bg-card p-4 md:p-6">
-              <h2 className="mb-4 text-2xl font-semibold text-foreground">
-                Kết quả học tập
+            <div className="rounded-lg border border-border bg-card p-4 md:p-6">
+              <h2 className="mb-4 text-lg font-semibold text-foreground">
+                GPA
               </h2>
               
-              {/* GPA trung bình toàn khóa */}
-              <div className="mb-6">
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-medium text-muted-foreground">
-                      GPA trung bình toàn khóa:
-                    </span>
-                    <span className="text-3xl font-bold text-primary">
-                      {overallGPA.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    Tổng số tín chỉ: {subjectMarks.filter(mark => shouldCountInGPA(mark)).reduce((sum, mark) => sum + (mark.credits || 0), 0)}
+              <div className="w-full">
+                {/* GPA toàn khóa - không có accordion, chỉ hiển thị badges */}
+                <div className="border-b border-border py-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+                    <h4 className="text-base font-semibold text-foreground text-left">
+                      GPA toàn khóa
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="default" className="text-sm px-2.5 py-1 whitespace-nowrap">
+                        GPA: {overallGPA.toFixed(2)}
+                      </Badge>
+                      <Badge variant="secondary" className="text-sm px-2.5 py-1 whitespace-nowrap">
+                        Tổng số tín chỉ: {subjectMarks.filter(mark => shouldCountInGPA(mark)).reduce((sum, mark) => sum + (mark.credits || 0), 0)}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* GPA theo từng năm học */}
-              {yearGPAs.length > 0 && (
-                <div>
-                  <h3 className="mb-4 text-lg font-semibold text-foreground">
-                    GPA theo từng năm học
-                  </h3>
-                  <div className="space-y-6">
-                    {yearGPAs.map((yearData, yearIndex) => (
-                      <div
-                        key={yearIndex}
-                        className="rounded-lg border border-border bg-card p-5"
-                      >
-                        <div className="mb-4 flex items-center justify-between">
-                          <h4 className="text-base font-semibold text-foreground">
+                {/* GPA theo từng năm học */}
+                <Accordion type="single" collapsible className="w-full">
+                  {yearGPAs.map((yearData, yearIndex) => (
+                    <AccordionItem
+                      key={yearIndex}
+                      value={`year-${yearIndex}`}
+                      className="border-b border-border last:border-b-0"
+                    >
+                      <AccordionTrigger className="hover:no-underline py-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+                          <h4 className="text-base font-semibold text-foreground text-left">
                             Năm học {yearData.year}
                           </h4>
-                          <div className="text-right">
-                            <div className="text-sm text-muted-foreground">
-                              Điểm trung bình năm học:
-                            </div>
-                            <div className="text-2xl font-bold text-primary">
-                              {yearData.yearGPA.toFixed(2)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="default" className="text-sm px-2.5 py-1 whitespace-nowrap">
+                              GPA: {yearData.yearGPA.toFixed(2)}
+                            </Badge>
+                            <Badge variant="secondary" className="text-sm px-2.5 py-1 whitespace-nowrap">
                               {yearData.yearCredits} tín chỉ
-                            </div>
+                            </Badge>
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="flex flex-col gap-3 pt-2">
                           {yearData.semesters.map((semester, semesterIndex) => {
                             // Lấy danh sách môn học của kỳ này
                             const semesterMarks = subjectMarks.filter(
@@ -641,44 +605,67 @@ export default function GradePage() {
                             return (
                               <div
                                 key={semesterIndex}
-                                className="cursor-pointer rounded-lg border border-border bg-muted p-4 transition-colors hover:bg-muted/80"
+                                className="cursor-pointer rounded-2xl border border-border bg-muted p-3 transition-colors hover:bg-muted/80 w-full"
                                 onClick={() => {
                                   setSelectedSemesterMarks(semesterMarks);
                                   setSelectedSemesterName(semester.semester);
-                                  setIsModalOpen(true);
+                                  setIsDialogOpen(true);
                                 }}
                               >
-                                <div className="mb-2 text-sm font-medium text-foreground">
-                                  {semester.semester}
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm text-muted-foreground">
-                                    GPA:
-                                  </span>
-                                  <span className="text-xl font-bold text-primary">
-                                    {semester.gpa.toFixed(2)}
-                                  </span>
-                                </div>
-                                <div className="mt-1 text-xs text-muted-foreground">
-                                  {semester.credits} tín chỉ
+                                <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4">
+                                  <div className="text-sm font-medium text-foreground">
+                                    {semester.semester}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="default" className="text-sm px-2.5 py-1 whitespace-nowrap">
+                                      GPA: {semester.gpa.toFixed(2)}
+                                    </Badge>
+                                    <Badge variant="secondary" className="text-sm px-2.5 py-1 whitespace-nowrap">
+                                      {semester.credits} tín chỉ
+                                    </Badge>
+                                  </div>
                                 </div>
                               </div>
                             );
                           })}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
             </div>
           )}
 
-          {/* Bảng điểm */}
           {!marksLoading && !marksError && subjectMarks.length > 0 && (
-            <div className="mb-8 rounded-lg border border-border bg-card p-4 md:p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <div className="relative flex-1 min-w-0">
+            <div className="rounded-lg border border-border bg-card p-4 md:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Bảng điểm môn học
+                </h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === 'table' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('table')}
+                    aria-label="Hiển thị dạng bảng"
+                  >
+                    <TableIcon className="h-4 w-4 mr-2" />
+                    Bảng
+                  </Button>
+                  <Button
+                    variant={viewMode === 'card' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('card')}
+                    aria-label="Hiển thị dạng thẻ"
+                  >
+                    <LayoutGrid className="h-4 w-4 mr-2" />
+                    Thẻ
+                  </Button>
+                </div>
+              </div>
+              <div className="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Tìm kiếm môn học, điểm, kỳ học..."
@@ -689,79 +676,145 @@ export default function GradePage() {
                 </div>
                 <FilterPopover />
               </div>
-              <div className="overflow-x-auto">
-                <DataTable 
-                  columns={columns} 
-                  data={filteredMarks}
-                  searchQuery={marksSearchQuery}
-                  onSearchChange={setMarksSearchQuery}
-                  getRowClassName={(row) => {
-                    const grade = row.letterGrade?.toUpperCase();
-                    return grade === 'F' ? 'bg-red-500/10 dark:bg-red-500/20' : '';
-                  }}
-                />
-              </div>
+              
+              {filteredAndSortedMarks.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  {marksSearchQuery ? "Không tìm thấy kết quả." : "Không có dữ liệu."}
+                </div>
+              ) : (
+                <>
+                  {viewMode === 'table' ? (
+                    <div className="w-full overflow-x-auto">
+                      <DataTable 
+                        columns={columns} 
+                        data={filteredAndSortedMarks}
+                        searchQuery={marksSearchQuery}
+                        onSearchChange={setMarksSearchQuery}
+                        getRowClassName={(row) => {
+                          const grade = row.letterGrade?.toUpperCase();
+                          return grade === 'F' ? 'bg-red-500/10 dark:bg-red-500/20' : '';
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mb-4 text-sm text-muted-foreground">
+                        {filteredAndSortedMarks.length} môn học
+                        {marksSearchQuery && ` (trong tổng số ${subjectMarks.length} môn học)`}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {filteredAndSortedMarks.map((mark, index) => {
+                          const grade = mark.letterGrade?.toUpperCase();
+                          const isFailed = grade === 'F';
+                          
+                          return (
+                            <Card
+                              key={index}
+                              className={`transition-all hover:shadow-md ${
+                                isFailed ? 'border-red-500/50 bg-red-500/5 dark:bg-red-500/10' : ''
+                              }`}
+                            >
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-base line-clamp-2">
+                                  {mark.subjectName || `Môn học ${index + 1}`}
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Tín chỉ:</span>
+                                  <span className="font-medium">{mark.credits !== undefined ? mark.credits : '-'}</span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Môn tính điểm:</span>
+                                  <Checkbox
+                                    checked={mark.isCounted === true}
+                                    disabled
+                                    aria-label={mark.isCounted === true ? 'Môn tính điểm' : 'Môn không tính điểm'}
+                                  />
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Điểm quá trình:</span>
+                                  <span className="font-medium">
+                                    {mark.processMark !== undefined ? mark.processMark.toFixed(2) : '-'}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Điểm thi:</span>
+                                  <span className="font-medium">
+                                    {mark.examMark !== undefined ? mark.examMark.toFixed(2) : '-'}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between pt-2 border-t border-border">
+                                  <span className="text-sm font-medium">Tổng điểm:</span>
+                                  <span className="text-lg font-semibold">
+                                    {mark.totalMark !== undefined ? mark.totalMark.toFixed(2) : '-'}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between pt-2 border-t border-border">
+                                  <span className="text-sm font-medium">Điểm chữ:</span>
+                                  <Badge 
+                                    variant={isFailed ? 'destructive' : 'default'}
+                                    className="text-base px-3 py-1"
+                                  >
+                                    {mark.letterGrade || '-'}
+                                  </Badge>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
             </div>
           )}
       </div>
 
-      {/* Modal hiển thị môn học theo kỳ */}
-      {isModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setIsModalOpen(false)}
-        >
-          <div 
-            className="w-full max-w-2xl rounded-lg border border-border bg-card shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="border-b border-border p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-foreground">
-                  Môn học kỳ {selectedSemesterName}
-                </h3>
-                <Button
-                  onClick={() => setIsModalOpen(false)}
-                  variant="ghost"
-                  size="icon"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+      {/* Dialog hiển thị môn học theo kỳ */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle>Môn học kỳ {selectedSemesterName}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            {selectedSemesterMarks.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                Không có môn học nào trong kỳ này
               </div>
-            </div>
-            <div className="max-h-[70vh] overflow-y-auto p-4">
-              {selectedSemesterMarks.length === 0 ? (
-                <div className="py-8 text-center text-muted-foreground">
-                  Không có môn học nào trong kỳ này
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {selectedSemesterMarks.map((mark, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium text-foreground">
-                          {mark.subjectName || `Môn học ${index + 1}`}
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          {mark.credits !== undefined ? `${mark.credits} tín chỉ` : ''}
-                        </div>
+            ) : (
+              <div className="space-y-3">
+                {selectedSemesterMarks.map((mark, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card p-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-foreground truncate">
+                        {mark.subjectName || `Môn học ${index + 1}`}
                       </div>
-                      <div className="ml-4 text-right">
-                        <div className="text-lg font-semibold text-primary">
-                          {mark.letterGrade || '-'}
-                        </div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        {mark.credits !== undefined ? `${mark.credits} tín chỉ` : ''}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <div className="ml-2 text-right flex-shrink-0">
+                      <div className="text-lg font-semibold text-primary">
+                        {mark.letterGrade || '-'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

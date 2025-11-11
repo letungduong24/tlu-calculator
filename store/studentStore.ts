@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import apiClient from '@/lib/axios';
 import { getErrorMessage } from '@/lib/error-handler';
-import { toast } from 'sonner';
 
 export interface StudentSummaryMark {
   studentId?: string;
@@ -182,7 +181,6 @@ const useStudentStore = create<StudentState>((set, get) => ({
       };
 
       set({ studentData: transformedData, loading: false });
-      toast.success('Tải thông tin sinh viên thành công!');
     } catch (error) {
       console.error('Error fetching student data:', error);
       const errorMessage = getErrorMessage(error) || 'Không thể tải thông tin sinh viên. Vui lòng thử lại.';
@@ -304,7 +302,6 @@ const useStudentStore = create<StudentState>((set, get) => ({
       console.log('=== TRANSFORMED MARKS ===', JSON.stringify(transformedMarks, null, 2));
 
       set({ subjectMarks: transformedMarks, marksLoading: false });
-      toast.success('Tải điểm môn học thành công!');
     } catch (error) {
       console.error('Error fetching subject marks:', error);
       const errorMessage = getErrorMessage(error) || 'Không thể tải thông tin điểm môn học. Vui lòng thử lại.';
@@ -345,7 +342,6 @@ const useStudentStore = create<StudentState>((set, get) => ({
         educationProgram: response.data.content || [], 
         educationProgramLoading: false 
       });
-      toast.success('Tải chương trình học thành công!');
     } catch (error) {
       console.error('Error fetching education program:', error);
       const errorMessage = getErrorMessage(error) || 'Không thể tải thông tin chương trình học. Vui lòng thử lại.';
