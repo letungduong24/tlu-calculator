@@ -785,7 +785,7 @@ export default function GradePage() {
 
       {/* Dialog hiển thị môn học theo kỳ */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[80vh] flex flex-col p-0">
+        <DialogContent showCloseButton={false} className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[80vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle>Môn học kỳ {selectedSemesterName}</DialogTitle>
           </DialogHeader>
