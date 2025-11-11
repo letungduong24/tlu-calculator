@@ -23,7 +23,9 @@ export default function AimPage() {
     educationProgram,
     educationProgramLoading,
     educationProgramError,
-    fetchEducationProgram
+    fetchEducationProgram,
+    studentData,
+    loading: studentDataLoading
   } = useStudentStore();
   const [mounted, setMounted] = useState(false);
   const [inputTargetGpa, setInputTargetGpa] = useState<string>('');
@@ -92,10 +94,13 @@ export default function AimPage() {
     return null;
   }
 
+  // Hiển thị loading skeleton khi đang fetch studentData hoặc educationProgram
+  const isLoading = studentDataLoading || educationProgramLoading;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-          {educationProgramLoading && (
+          {isLoading && (
             <div className="space-y-6">
               {/* Skeleton cho tổng quan */}
               <div className="rounded-lg border border-border bg-card p-6">
@@ -136,13 +141,13 @@ export default function AimPage() {
             </div>
           )}
 
-          {educationProgramError && (
+          {educationProgramError && !isLoading && (
             <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
               {educationProgramError}
             </div>
           )}
 
-          {!educationProgramLoading && !educationProgramError && (
+          {!isLoading && !educationProgramError && (
             <>
               {/* Hiển thị số tín chỉ */}
               <div className="rounded-lg border border-border bg-card p-4">

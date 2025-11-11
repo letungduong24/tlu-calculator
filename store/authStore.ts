@@ -118,7 +118,25 @@ const useAuthStore = create<AuthState>((set) => {
         localStorage.removeItem('tokenType');
         localStorage.removeItem('expiresIn');
         localStorage.removeItem('scope');
+        
+        // Clear tất cả state của các store khác
+        // Import động để tránh circular dependency
+        Promise.all([
+          import('@/store/studentStore'),
+          import('@/store/scheduleStore'),
+        ]).then(([{ default: useStudentStore }, { default: useScheduleStore }]) => {
+          // Clear studentStore
+          useStudentStore.getState().clearStudentData();
+          useStudentStore.getState().clearSubjectMarks();
+          useStudentStore.getState().clearEducationProgram();
+          
+          // Clear scheduleStore
+          useScheduleStore.getState().clearSchedule();
+        }).catch((error) => {
+          console.error('Error clearing stores on logout:', error);
+        });
       }
+      
       set({
         accessToken: null,
         refreshToken: null,

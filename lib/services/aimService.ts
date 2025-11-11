@@ -383,12 +383,60 @@ export const findIncompleteSubjects = (
     
     if (!block.isComplete) {
       if (block.blockType === 2) {
-        // Block tự chọn: thu thập số từ displayName
+        // Block tự chọn: có thể có 2 dạng
+        // 1. Có số trong displayName (ví dụ: "Tự chọn 1", "Tự chọn 2")
+        // 2. Không có số trong displayName (ví dụ: "Kiến thức tự chọn")
         const match = block.displayName?.match(/(\d+)/);
         if (match) {
+          // Dạng 1: Có số trong tên - thu thập số
           electiveNumbers.add(parseInt(match[1], 10));
+        } else {
+          // Dạng 2: Không có số trong tên - xử lý như một block tự chọn đơn lẻ
+          // Kiểm tra xem có children không
+          const hasChildren = block.children && block.children.length > 0;
+          
+          if (!hasChildren) {
+            // Block tự chọn không có children (leaf node) - tính số tín chỉ còn thiếu
+            const minRequiredCredits = block.minNumberCredit && block.minNumberCredit > 0
+              ? block.minNumberCredit
+              : 3;
+            
+            // Tính số tín chỉ đã học từ listStudentSubjectMark của block này
+            let passedCreditsInBlock = 0;
+            if (block.listStudentSubjectMark && block.listStudentSubjectMark.length > 0) {
+              const blockMarks = processRetakeStudentMarks(block.listStudentSubjectMark);
+              const countedInBlock = new Set<string>();
+              
+              blockMarks.forEach((mark) => {
+                const subjectCode = mark.subject?.subjectCode;
+                if (!subjectCode) return;
+                
+                const isPassed = mark.result === 1 && 
+                                 mark.charMark?.toUpperCase() !== 'F' &&
+                                 mark.isCounted !== false;
+                
+                if (isPassed && mark.subject?.numberOfCredit && !countedInBlock.has(subjectCode)) {
+                  passedCreditsInBlock += mark.subject.numberOfCredit;
+                  countedInBlock.add(subjectCode);
+                }
+              });
+            }
+            
+            // Số tín chỉ còn thiếu = minNumberCredit - passedCredits (tối thiểu là 0)
+            const remainingCredits = Math.max(0, minRequiredCredits - passedCreditsInBlock);
+            
+            if (remainingCredits > 0) {
+              incomplete.push({
+                name: block.displayName || 'Kiến thức tự chọn',
+                blockType: 2,
+                displayName: block.displayName,
+                credits: remainingCredits,
+              });
+            }
+          }
         }
         
+        // Xử lý children nếu có
         if (block.children && block.children.length > 0) {
           block.children.forEach((child) => {
             if (!child.isComplete && child.blockType === 2) {

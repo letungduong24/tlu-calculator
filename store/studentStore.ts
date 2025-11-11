@@ -346,15 +346,29 @@ const useStudentStore = create<StudentState>((set, get) => ({
     let studentData = get().studentData;
     let programId = studentData?.programId;
 
+    // Set loading state ngay để hiển thị skeleton
+    set({ educationProgramLoading: true, educationProgramError: null });
+
     // Nếu chưa có programId, cần fetch studentData trước
     if (!programId) {
+      // Đợi nếu studentData đang được fetch
+      if (get().loading) {
+        // Đợi tối đa 10 giây cho fetchStudentData hoàn thành
+        let waitCount = 0;
+        while (get().loading && waitCount < 100) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          waitCount++;
+        }
+      }
+      
       // Thử fetch studentData nếu chưa có
       if (!studentData && !get().loading) {
         await get().fetchStudentData();
-        // Sau khi fetch, lấy lại studentData và programId
-        studentData = get().studentData;
-        programId = studentData?.programId;
       }
+      
+      // Sau khi fetch hoặc đợi xong, lấy lại studentData và programId
+      studentData = get().studentData;
+      programId = studentData?.programId;
       
       // Kiểm tra lại sau khi fetch
       if (!programId) {
@@ -367,8 +381,6 @@ const useStudentStore = create<StudentState>((set, get) => ({
         return;
       }
     }
-
-    set({ educationProgramLoading: true, educationProgramError: null });
     
     try {
       // Sử dụng programId từ studentData thay vì hardcode

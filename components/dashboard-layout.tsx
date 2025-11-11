@@ -33,7 +33,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
-  const { clearStudentData, studentData, loading: studentLoading, fetchStudentData } = useStudentStore();
+  const { studentData, loading: studentLoading, fetchStudentData } = useStudentStore();
   const { openLoginDialog } = useLoginDialogStore();
   const [mounted, setMounted] = useState(false);
 
@@ -52,7 +52,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [mounted, isAuthenticated]);
 
   const handleLogout = () => {
-    clearStudentData();
     logout();
     router.push('/');
   };
