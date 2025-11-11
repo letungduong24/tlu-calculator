@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import useAuthStore from '@/store/authStore';
 import useStudentStore, { SubjectMark } from '@/store/studentStore';
-import { shouldCountInGPA, calculateGPA, calculateGPAByYear } from '@/lib/services/gradeService';
+import { shouldCountInGPA, calculateGPA, calculateGPAByYear, processRetakeSubjects } from '@/lib/services/gradeService';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -228,9 +228,12 @@ export default function GradePage() {
   }, [subjectMarks, marksFilters, marksSearchQuery]);
 
   // Tính GPA trung bình toàn khóa và theo từng năm học
-  const { overallGPA, yearGPAs } = useMemo(() => {
+  const { overallGPA, yearGPAs, processedMarksForCredits } = useMemo(() => {
+    // Xử lý môn học cải thiện: chỉ tính một lần cho mỗi môn học cải thiện
+    const processedMarks = processRetakeSubjects(subjectMarks);
+    
     // Debug: Log các môn không được tính vào GPA
-    const excludedMarks = subjectMarks.filter(mark => !shouldCountInGPA(mark));
+    const excludedMarks = processedMarks.filter(mark => !shouldCountInGPA(mark));
     if (excludedMarks.length > 0) {
       console.log('=== MARKS EXCLUDED FROM GPA ===', excludedMarks.length);
       excludedMarks.forEach(mark => {
@@ -246,7 +249,7 @@ export default function GradePage() {
     }
     
     // Debug: Log các môn được tính vào GPA
-    const includedMarks = subjectMarks.filter(mark => shouldCountInGPA(mark));
+    const includedMarks = processedMarks.filter(mark => shouldCountInGPA(mark));
     console.log('=== MARKS INCLUDED IN GPA ===', includedMarks.length);
     console.log('Total credits:', includedMarks.reduce((sum, mark) => sum + (mark.credits || 0), 0));
     
@@ -257,7 +260,7 @@ export default function GradePage() {
     console.log('Overall GPA:', overall);
     console.log('Year GPAs:', byYear);
     
-    return { overallGPA: overall, yearGPAs: byYear };
+    return { overallGPA: overall, yearGPAs: byYear, processedMarksForCredits: processedMarks };
   }, [subjectMarks]);
 
   // Component filter UI trong popover
@@ -565,7 +568,7 @@ export default function GradePage() {
                         GPA: {overallGPA.toFixed(2)}
                       </Badge>
                       <Badge variant="secondary" className="text-sm px-2.5 py-1 whitespace-nowrap">
-                        Tổng số tín chỉ: {subjectMarks.filter(mark => shouldCountInGPA(mark)).reduce((sum, mark) => sum + (mark.credits || 0), 0)}
+                        Tổng số tín chỉ: {processedMarksForCredits.filter(mark => shouldCountInGPA(mark)).reduce((sum, mark) => sum + (mark.credits || 0), 0)}
                       </Badge>
                     </div>
                   </div>

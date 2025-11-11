@@ -1,5 +1,5 @@
-import { EducationBlock, ProgramSubject, SubjectMark } from '@/store/studentStore';
-import { shouldCountInGPA, calculateGPA } from './gradeService';
+import { EducationBlock, ProgramSubject, SubjectMark, StudentSubjectMark } from '@/store/studentStore';
+import { shouldCountInGPA, calculateGPA, processRetakeSubjects } from './gradeService';
 
 export interface IncompleteSubject {
   name: string;
@@ -141,6 +141,127 @@ export const isExcludedSubject = (subject: ProgramSubject): boolean => {
 };
 
 /**
+ * So sánh hai semester để xác định cái nào mới hơn (cho StudentSubjectMark)
+ */
+const compareSemesterForStudentMark = (a: StudentSubjectMark, b: StudentSubjectMark): number => {
+  // Ưu tiên so sánh theo semesterId (id lớn hơn = mới hơn)
+  const aSemesterId = (a as any).semester?.id;
+  const bSemesterId = (b as any).semester?.id;
+  
+  if (aSemesterId !== undefined && bSemesterId !== undefined) {
+    return bSemesterId - aSemesterId;
+  }
+  
+  // Nếu không có semesterId, so sánh theo semesterCode
+  const aCode = (a as any).semester?.semesterCode || (a as any).semester?.semesterName || '';
+  const bCode = (b as any).semester?.semesterCode || (b as any).semester?.semesterName || '';
+  
+  // Extract năm và kỳ từ code (ví dụ: "2_2024_2025" -> kỳ 2, năm 2024)
+  const aMatch = aCode.match(/^(\d+)[_-](\d{4})/);
+  const bMatch = bCode.match(/^(\d+)[_-](\d{4})/);
+  
+  if (aMatch && bMatch) {
+    const aYear = parseInt(aMatch[2]);
+    const bYear = parseInt(bMatch[2]);
+    const aSem = parseInt(aMatch[1]);
+    const bSem = parseInt(bMatch[1]);
+    
+    // So sánh năm trước, sau đó so sánh kỳ
+    if (aYear !== bYear) {
+      return bYear - aYear;
+    }
+    return bSem - aSem;
+  }
+  
+  // Nếu không parse được, so sánh string
+  return bCode.localeCompare(aCode);
+};
+
+/**
+ * Xử lý môn học cải thiện từ listStudentSubjectMark: với môn học cải thiện (không phải trượt),
+ * chỉ lấy lần học mới nhất và chỉ tính tín chỉ một lần
+ */
+const processRetakeStudentMarks = (marks: StudentSubjectMark[]): StudentSubjectMark[] => {
+  if (!marks || marks.length === 0) return [];
+  
+  // Nhóm các môn học theo subjectCode
+  const subjectMap = new Map<string, StudentSubjectMark[]>();
+  
+  marks.forEach((mark) => {
+    const subjectCode = mark.subject?.subjectCode;
+    // Nếu không có subjectCode, không thể nhóm, giữ nguyên
+    if (!subjectCode) {
+      return;
+    }
+    
+    if (!subjectMap.has(subjectCode)) {
+      subjectMap.set(subjectCode, []);
+    }
+    subjectMap.get(subjectCode)!.push(mark);
+  });
+  
+  const processedMarks: StudentSubjectMark[] = [];
+  const marksWithoutCode: StudentSubjectMark[] = [];
+  
+  // Xử lý từng nhóm môn học
+  subjectMap.forEach((groupMarks, subjectCode) => {
+    // Nếu chỉ có 1 môn, giữ nguyên
+    if (groupMarks.length === 1) {
+      processedMarks.push(groupMarks[0]);
+      return;
+    }
+    
+    // Kiểm tra xem có môn nào trượt không (charMark === 'F')
+    const failedMarks = groupMarks.filter(m => 
+      m.charMark?.toUpperCase() === 'F'
+    );
+    
+    // Nếu có môn trượt, giữ tất cả (cả trượt và cải thiện)
+    if (failedMarks.length > 0) {
+      processedMarks.push(...groupMarks);
+      return;
+    }
+    
+    // Nếu không có môn trượt, tất cả đều là cải thiện
+    // Chỉ lấy môn mới nhất (sắp xếp và lấy phần tử đầu tiên)
+    const sortedMarks = [...groupMarks].sort(compareSemesterForStudentMark);
+    processedMarks.push(sortedMarks[0]);
+  });
+  
+  // Thêm các môn không có subjectCode (không thể nhóm)
+  marks.forEach((mark) => {
+    if (!mark.subject?.subjectCode) {
+      marksWithoutCode.push(mark);
+    }
+  });
+  
+  return [...processedMarks, ...marksWithoutCode];
+};
+
+/**
+ * Tính passedCredits từ listStudentSubjectMark (đã xử lý môn học cải thiện)
+ */
+const calculatePassedCreditsFromStudentMarks = (marks: StudentSubjectMark[]): number => {
+  if (!marks || marks.length === 0) return 0;
+  
+  // Xử lý môn học cải thiện trước
+  const processedMarks = processRetakeStudentMarks(marks);
+  
+  // Tính tổng tín chỉ từ các môn đã qua (result === 1 và không phải F)
+  return processedMarks.reduce((sum, mark) => {
+    // Chỉ tính các môn đã qua (result === 1) và không phải F
+    const isPassed = mark.result === 1 && 
+                     mark.charMark?.toUpperCase() !== 'F' &&
+                     mark.isCounted !== false;
+    
+    if (isPassed && mark.subject?.numberOfCredit) {
+      return sum + mark.subject.numberOfCredit;
+    }
+    return sum;
+  }, 0);
+};
+
+/**
  * Tính tổng tín chỉ và tín chỉ đã học từ blocks
  */
 export const calculateCreditsFromBlocks = (
@@ -149,6 +270,35 @@ export const calculateCreditsFromBlocks = (
 ): { totalCredits: number; passedCredits: number } => {
   let totalCredits = 0;
   let passedCredits = 0;
+  
+  // Thu thập tất cả listStudentSubjectMark từ tất cả các blocks (để xử lý môn học cải thiện toàn cục)
+  const allStudentMarks: StudentSubjectMark[] = [];
+  
+  const collectAllStudentMarks = (blocks: EducationBlock[]) => {
+    blocks.forEach((block) => {
+      if (isExcludedBlock(block)) {
+        return;
+      }
+      
+      // Thu thập từ block này
+      if (block.listStudentSubjectMark && block.listStudentSubjectMark.length > 0) {
+        allStudentMarks.push(...block.listStudentSubjectMark);
+      }
+      
+      // Thu thập từ children
+      if (block.children && block.children.length > 0) {
+        collectAllStudentMarks(block.children);
+      }
+    });
+  };
+  
+  collectAllStudentMarks(blocks);
+  
+  // Xử lý môn học cải thiện toàn cục
+  const processedAllMarks = processRetakeStudentMarks(allStudentMarks);
+  
+  // Tạo Set để track các môn đã tính (theo subjectCode)
+  const countedSubjects = new Set<string>();
   
   blocks.forEach((block) => {
     if (isExcludedBlock(block)) {
@@ -191,24 +341,26 @@ export const calculateCreditsFromBlocks = (
       }
     }
     
-    // passedCredits: CHỈ tính từ top-level blocks
-    if (isTopLevel) {
-      let blockPassedCredits = block.passedCredits || 0;
-      // Nếu có children, trừ đi passedCredits của children bị loại trừ
-      if (hasChildren) {
-        block.children.forEach((child) => {
-          if (isExcludedBlock(child)) {
-            blockPassedCredits -= (child.passedCredits || 0);
-          }
-        });
-      }
-      passedCredits += Math.max(0, blockPassedCredits);
-    }
-    
     // Duyệt children để tính leaf blocks
     if (hasChildren) {
       const childCredits = calculateCreditsFromBlocks(block.children, false);
       totalCredits += childCredits.totalCredits;
+    }
+  });
+  
+  // Tính passedCredits từ tất cả các môn đã xử lý (chỉ tính một lần cho mỗi môn)
+  processedAllMarks.forEach((mark) => {
+    const subjectCode = mark.subject?.subjectCode;
+    if (!subjectCode) return;
+    
+    // Chỉ tính các môn đã qua (result === 1) và không phải F
+    const isPassed = mark.result === 1 && 
+                     mark.charMark?.toUpperCase() !== 'F' &&
+                     mark.isCounted !== false;
+    
+    if (isPassed && mark.subject?.numberOfCredit && !countedSubjects.has(subjectCode)) {
+      passedCredits += mark.subject.numberOfCredit;
+      countedSubjects.add(subjectCode);
     }
   });
   

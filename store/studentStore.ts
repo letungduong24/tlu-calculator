@@ -36,6 +36,7 @@ export interface StudentSummaryMark {
 }
 
 export interface SubjectMark {
+  subjectCode?: string;
   subjectName?: string;
   credits?: number;
   processMark?: number;
@@ -48,6 +49,7 @@ export interface SubjectMark {
   semesterName?: string;
   isCounted?: boolean;
   result?: number;
+  id?: number;
   [key: string]: any;
 }
 
@@ -283,6 +285,8 @@ const useStudentStore = create<StudentState>((set, get) => ({
         }
         
         return {
+          id: item.id,
+          subjectCode: item.subject?.subjectCode || item.subjectCode,
           subjectName,
           credits,
           processMark,
