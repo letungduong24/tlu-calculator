@@ -54,6 +54,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const handleLogout = () => {
     clearStudentData();
     logout();
+    router.push('/');
   };
 
   const menuItems = isAuthenticated

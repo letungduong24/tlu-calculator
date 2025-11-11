@@ -1,6 +1,6 @@
 {
-  "name": "TLU Calculator",
-  "short_name": "TLU Calc",
+  "name": "TLU Extension",
+  "short_name": "TLU Extension",
   "description": "Tính điểm TLU và xem lịch học",
   "start_url": "/",
   "display": "standalone",

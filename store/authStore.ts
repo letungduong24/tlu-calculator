@@ -80,9 +80,6 @@ const useAuthStore = create<AuthState>((set) => {
           error: null, // Clear error sau khi đăng nhập thành công
         });
 
-        // Hiển thị toast thành công
-        toast.success('Đăng nhập thành công!');
-
         // Clear các lỗi trong các store khác sau khi đăng nhập thành công
         if (typeof window !== 'undefined') {
           // Import động để tránh circular dependency
@@ -132,7 +129,6 @@ const useAuthStore = create<AuthState>((set) => {
         loading: false,
         error: null,
       });
-      toast.info('Đã đăng xuất');
     },
   };
 });
