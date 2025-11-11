@@ -87,7 +87,7 @@ export default function Home() {
             </div>
                 
                 {/* Tabs */}
-                <div className="mb-4 flex gap-2 border-b border-border">
+                <div className="mb-4 flex flex-wrap gap-2 border-b border-border">
                   <Button
                     onClick={() => {
                       setActiveTab('today');
