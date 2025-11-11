@@ -67,7 +67,7 @@ export default function Home() {
           {/* Lịch học - Hiển thị cho tất cả người dùng */}
           <div className="rounded-lg border border-border bg-card p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className=" font-semibold text-foreground">
                 Lịch học
               </h3>
               {isAuthenticated && (
@@ -81,7 +81,7 @@ export default function Home() {
               )}
               {!isAuthenticated && (
                 <span className="text-sm text-muted-foreground">
-                  Đăng nhập để tải lịch học mới nhất
+                  Đăng nhập để tải lịch học
                 </span>
               )}
             </div>
@@ -116,7 +116,7 @@ export default function Home() {
                         : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50'
                     }`}
                   >
-                    Tất cả các ngày
+                    Tất cả
                   </Button>
                   <Button
                     onClick={() => {
@@ -131,7 +131,7 @@ export default function Home() {
                         : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50'
                     }`}
                   >
-                    Tìm theo ngày
+                    Theo ngày
                   </Button>
                 </div>
 
