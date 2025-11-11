@@ -25,7 +25,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { Filter, Search, LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { Filter, Search, LayoutGrid, Table as TableIcon, ChevronRight } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -613,16 +613,22 @@ export default function GradePage() {
                                 }}
                               >
                                 <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4">
-                                  <div className="text-sm font-medium text-foreground">
-                                    {semester.semester}
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-sm font-medium text-foreground">
+                                      {semester.semester}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground hidden sm:inline">
+                                      Click để xem
+                                    </span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Badge variant="default" className="text-sm px-2.5 py-1 whitespace-nowrap">
                                       GPA: {semester.gpa.toFixed(2)}
                                     </Badge>
-                                    <Badge variant="secondary" className="text-sm px-2.5 py-1 whitespace-nowrap">
+                                    <Badge variant="outline" className="text-sm px-2.5 py-1 whitespace-nowrap">
                                       {semester.credits} tín chỉ
                                     </Badge>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                   </div>
                                 </div>
                               </div>
@@ -790,26 +796,36 @@ export default function GradePage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {selectedSemesterMarks.map((mark, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card p-3"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-foreground truncate">
-                        {mark.subjectName || `Môn học ${index + 1}`}
+                {selectedSemesterMarks.map((mark, index) => {
+                  const grade = mark.letterGrade?.toUpperCase();
+                  const isFailed = grade === 'F';
+                  
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-foreground break-words">
+                          {mark.subjectName || `Môn học ${index + 1}`}
+                        </div>
                       </div>
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        {mark.credits !== undefined ? `${mark.credits} tín chỉ` : ''}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {mark.credits !== undefined && (
+                          <Badge variant="secondary" className="text-sm px-2.5 py-1 whitespace-nowrap">
+                            {mark.credits} tín chỉ
+                          </Badge>
+                        )}
+                        <Badge 
+                          variant={isFailed ? 'destructive' : 'default'}
+                          className="text-sm px-2.5 py-1 whitespace-nowrap"
+                        >
+                          {mark.letterGrade || '-'}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="ml-2 text-right flex-shrink-0">
-                      <div className="text-lg font-semibold text-primary">
-                        {mark.letterGrade || '-'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
