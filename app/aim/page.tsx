@@ -38,7 +38,7 @@ export default function AimPage() {
     if (!mounted) return;
     
     if (!isAuthenticated) {
-      router.push('/login');
+      router.push('/');
       return;
     }
     

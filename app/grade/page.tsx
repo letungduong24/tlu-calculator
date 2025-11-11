@@ -56,7 +56,7 @@ export default function GradePage() {
     if (!mounted) return;
     
     if (!isAuthenticated) {
-      router.push('/login');
+      router.push('/');
       return;
     }
     
@@ -275,7 +275,7 @@ export default function GradePage() {
             <Filter className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto" align="start">
+        <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto mx-4" align="start">
           <div className="space-y-4">
             <div>
               <h4 className="font-medium text-sm mb-4">Bộ lọc</h4>
@@ -779,7 +779,7 @@ export default function GradePage() {
 
       {/* Dialog hiển thị môn học theo kỳ */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[80vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle>Môn học kỳ {selectedSemesterName}</DialogTitle>
           </DialogHeader>
