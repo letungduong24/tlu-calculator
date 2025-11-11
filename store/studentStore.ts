@@ -21,6 +21,7 @@ export interface StudentSummaryMark {
   specialityName?: string;
   courseYear?: string;
   educationTypeName?: string;
+  programId?: number;
   gpa?: number;
   averageMark?: number;
   totalCredits?: number;
@@ -148,6 +149,11 @@ const useStudentStore = create<StudentState>((set, get) => ({
       // Lấy enrollmentClass từ nhiều nguồn có thể: student.enrollmentClass, apiData.enrollmentClassDto, apiData.enrollmentClass
       const enrollmentClass = student.enrollmentClass || apiData.enrollmentClassDto || apiData.enrollmentClass || {};
 
+      // Lấy programId từ enrollmentClass.program.id hoặc student.programs[0].program.id
+      const programId = enrollmentClass.program?.id || 
+                       (student.programs && student.programs.length > 0 && student.programs[0].program?.id) ||
+                       undefined;
+
       // Transform API response - lấy đúng từ enrollmentClass
       const transformedData: StudentSummaryMark = {
         studentId: student.id?.toString(),
@@ -174,6 +180,8 @@ const useStudentStore = create<StudentState>((set, get) => ({
         educationTypeName: enrollmentClass.courseyear?.educationType?.name ||
           enrollmentClass.educationType?.name ||
           enrollmentClass.program?.educationType?.name || undefined,
+        // Program ID - dùng để gọi API education program
+        programId: programId,
         // Academic info
         gpa: apiData.gpa,
         averageMark: apiData.averageMark,
@@ -334,12 +342,39 @@ const useStudentStore = create<StudentState>((set, get) => ({
       return;
     }
 
+    // Lấy programId từ studentData
+    let studentData = get().studentData;
+    let programId = studentData?.programId;
+
+    // Nếu chưa có programId, cần fetch studentData trước
+    if (!programId) {
+      // Thử fetch studentData nếu chưa có
+      if (!studentData && !get().loading) {
+        await get().fetchStudentData();
+        // Sau khi fetch, lấy lại studentData và programId
+        studentData = get().studentData;
+        programId = studentData?.programId;
+      }
+      
+      // Kiểm tra lại sau khi fetch
+      if (!programId) {
+        set({ 
+          educationProgramError: studentData 
+            ? 'Không tìm thấy thông tin ngành học. Vui lòng thử lại.'
+            : 'Vui lòng đăng nhập để xem chương trình học.',
+          educationProgramLoading: false 
+        });
+        return;
+      }
+    }
+
     set({ educationProgramLoading: true, educationProgramError: null });
     
     try {
-      // API mặc định với studentId = 178
+      // Sử dụng programId từ studentData thay vì hardcode
+      const finalProgramId = programId;
       const response = await apiClient.get<{ content: EducationBlock[]; totalElements: number }>(
-        '/api/studentsubjectmark/checkFinishedEducationProgramOfStudent/tree/studentId/178'
+        `/api/studentsubjectmark/checkFinishedEducationProgramOfStudent/tree/studentId/${finalProgramId}`
       );
 
       set({ 
