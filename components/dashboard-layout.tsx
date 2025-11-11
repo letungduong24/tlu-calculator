@@ -163,8 +163,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-card px-4">
+      <SidebarInset style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <header 
+          className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-4" 
+          style={{ 
+            minHeight: '4rem',
+          }}
+        >
           <SidebarTrigger className="-ml-1" />
           <div className="flex flex-1 items-center gap-2">
             <h1 className="text-lg font-semibold text-foreground">
@@ -211,7 +216,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <ThemeToggle />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 md:p-6 min-w-0 overflow-x-hidden">
+        <div 
+          className="flex flex-1 flex-col gap-4 p-4 md:p-6 min-w-0 overflow-x-hidden"
+          style={{ paddingBottom: `max(1.5rem, calc(1.5rem + env(safe-area-inset-bottom)))` }}
+        >
           {children}
         </div>
       </SidebarInset>
