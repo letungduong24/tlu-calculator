@@ -28,7 +28,7 @@ export function getErrorMessage(error: unknown): string {
         axiosError.response?.status === 502 || 
         axiosError.response?.status === 503 || 
         axiosError.response?.status === 504) {
-      return 'Server của trường đóng sau 12h đêm, hiện tại không thể lấy dữ liệu';
+      return 'Server lỗi hoặc không thể kết nối';
     }
 
     // Lỗi mạng (có thể do server đóng)
