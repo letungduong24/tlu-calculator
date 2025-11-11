@@ -58,13 +58,13 @@ export function LoginDialog() {
         <DialogHeader>
           <DialogTitle>Đăng nhập</DialogTitle>
           <DialogDescription>
-            Nhập thông tin đăng nhập của bạn để tiếp tục
+            Dùng tài khoản sinhvien.tlu.edu.vn để đăng nhập
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="dialog-username">
-              Tên đăng nhập
+              Tài khoản
             </Label>
             <Input
               id="dialog-username"
