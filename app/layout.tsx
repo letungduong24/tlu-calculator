@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -22,7 +22,6 @@ export const metadata: Metadata = {
   title: "TLU Extension",
   description: "Tiện ích sinh viên Thủy Lợi",
   manifest: "/manifest.json",
-  themeColor: "#000000",
   icons: {
     icon: [
       { url: "/logo/192.png", sizes: "192x192", type: "image/png" },
@@ -37,13 +36,15 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "TLU Calculator",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: "cover",
-  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({

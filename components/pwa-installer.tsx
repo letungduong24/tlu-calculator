@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { GoShare } from "react-icons/go";
+
 import {
   Dialog,
   DialogContent,
@@ -34,7 +36,6 @@ export function PWAInstaller() {
     // iOS doesn't support beforeinstallprompt, so show instructions
     if (iOS) {
       setShowInstallButton(true);
-      return;
     }
 
     // Listen for beforeinstallprompt event (Chrome/Edge/Android)
@@ -53,23 +54,17 @@ export function PWAInstaller() {
 
   const handleInstallClick = async () => {
     if (isIOS) {
-      // Show instructions dialog for iOS
       setShowIOSDialog(true);
-      return;
+    } else if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        setShowInstallButton(false);
+      }
+      
+      setDeferredPrompt(null);
     }
-
-    if (!deferredPrompt) {
-      return;
-    }
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setShowInstallButton(false);
-    }
-    
-    setDeferredPrompt(null);
   };
 
   if (!showInstallButton || isStandalone) {
@@ -83,13 +78,13 @@ export function PWAInstaller() {
           onClick={handleInstallClick}
           className="shadow-lg"
         >
-          {isIOS ? 'Hướng dẫn cài đặt' : 'Cài đặt ứng dụng'}
+          {isIOS ? 'Hướng dẫn cài đặt ứng dụng' : 'Cài đặt ứng dụng'} 
         </Button>
       </div>
 
       {/* Dialog hướng dẫn cài đặt cho iOS */}
       <Dialog open={showIOSDialog} onOpenChange={setShowIOSDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-w-[calc(100vw-2rem)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Hướng dẫn cài đặt ứng dụng</DialogTitle>
             <DialogDescription>
@@ -101,11 +96,20 @@ export function PWAInstaller() {
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
                 1
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Nhấn nút Share</p>
-                <p className="text-sm text-muted-foreground">
-                  Tìm và nhấn vào nút Share (hình vuông với mũi tên lên) ở thanh công cụ dưới cùng của Safari
-                </p>
+              <div className="space-y-2 flex-1">
+                <div>
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    Nhấn nút <GoShare className="h-4 w-4" /> Share
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Tìm và nhấn vào nút Share ở thanh công cụ dưới cùng của Safari
+                  </p>
+                </div>
+                <img 
+                  src="/share.png" 
+                  alt="Nút Share trên iOS Safari" 
+                  className="w-full max-w-xs mx-auto rounded-lg border border-border"
+                />
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -115,7 +119,7 @@ export function PWAInstaller() {
               <div className="space-y-1">
                 <p className="text-sm font-medium">Chọn "Thêm vào Màn hình chính"</p>
                 <p className="text-sm text-muted-foreground">
-                  Cuộn xuống trong menu Share và chọn tùy chọn "Thêm vào Màn hình chính"
+                  Tìm và nhấn nút "Thêm vào Màn hình chính" trong menu
                 </p>
               </div>
             </div>
