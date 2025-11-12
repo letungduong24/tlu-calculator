@@ -14,6 +14,7 @@ interface ScheduleListProps {
   scheduleError: string | null;
   activeTab: 'today' | 'all' | 'date';
   selectedDate?: Date;
+  hasScheduleInIDB?: boolean;
 }
 
 export function ScheduleList({
@@ -22,6 +23,7 @@ export function ScheduleList({
   scheduleError,
   activeTab,
   selectedDate,
+  hasScheduleInIDB = false,
 }: ScheduleListProps) {
   const { useCurrentSchedule } = useScheduleStore();
   if (scheduleLoading) {
@@ -81,6 +83,16 @@ export function ScheduleList({
   }
 
   if (displaySchedule.length === 0) {
+    // Nếu chưa có dữ liệu trong IDB, hiển thị "Chưa tải lịch"
+    if (!hasScheduleInIDB) {
+      return (
+        <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+          Chưa tải lịch
+        </div>
+      );
+    }
+    
+    // Nếu đã có dữ liệu trong IDB nhưng không có lịch cho ngày/ngày hôm nay
     let message = 'Chưa có lịch học.';
     if (activeTab === 'today') {
       message = 'Hôm nay không có lịch học.';

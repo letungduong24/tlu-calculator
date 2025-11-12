@@ -10,24 +10,14 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import useSessionExpiredDialogStore from '@/store/sessionExpiredDialogStore';
-import useLoginDialogStore from '@/store/loginDialogStore';
 
 export function SessionExpiredDialog() {
   const { isOpen, closeSessionExpiredDialog } = useSessionExpiredDialogStore();
-  const { openLoginDialog } = useLoginDialogStore();
-
-  const handleClose = () => {
-    closeSessionExpiredDialog();
-    // Tự động mở login dialog sau khi đóng dialog thông báo
-    setTimeout(() => {
-      openLoginDialog();
-    }, 100);
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) {
-        handleClose();
+        closeSessionExpiredDialog();
       }
     }}>
       <DialogContent className="sm:max-w-md">
@@ -38,8 +28,8 @@ export function SessionExpiredDialog() {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button onClick={handleClose} className="w-full sm:w-auto">
-            Đăng nhập lại
+          <Button onClick={closeSessionExpiredDialog} className="w-full sm:w-auto">
+            Đã hiểu
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -19,6 +19,7 @@ export default function Home() {
     scheduleLoading,
     scheduleError,
     scheduleFetched,
+    hasScheduleInIDB,
     fetchSchedule,
     loadScheduleFromIDB,
   } = useScheduleStore();
@@ -154,6 +155,7 @@ export default function Home() {
                   scheduleError={scheduleError}
                   activeTab={activeTab}
                   selectedDate={selectedDate}
+                  hasScheduleInIDB={hasScheduleInIDB}
                 />
           </div>
       </div>

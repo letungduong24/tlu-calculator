@@ -28,6 +28,7 @@ interface ScheduleState {
   scheduleLoading: boolean;
   scheduleError: string | null;
   scheduleFetched: boolean;
+  hasScheduleInIDB: boolean;
   fetchSchedule: () => Promise<void>;
   loadScheduleFromIDB: () => Promise<void>;
   useCurrentSchedule: () => Promise<void>;
@@ -39,6 +40,7 @@ const useScheduleStore = create<ScheduleState>((set, get) => ({
   scheduleLoading: false,
   scheduleError: null,
   scheduleFetched: false,
+  hasScheduleInIDB: false,
   fetchSchedule: async () => {
     // Tránh gọi API nếu đang loading
     if (get().scheduleLoading) {
@@ -51,12 +53,33 @@ const useScheduleStore = create<ScheduleState>((set, get) => ({
       const scheduleByDate = await fetchAndProcessSchedule();
       // Lưu vào IDB
       await saveScheduleToIDB(scheduleByDate);
-      set({ scheduleByDate, scheduleLoading: false, scheduleFetched: true });
+      set({ scheduleByDate, scheduleLoading: false, scheduleFetched: true, hasScheduleInIDB: true });
       toast.success('Tải lịch học thành công!');
     } catch (error) {
       console.error('Error fetching schedule:', error);
-      const errorMessage = getErrorMessage(error) || 'Không thể tải lịch học. Vui lòng thử lại.';
-      set({ scheduleError: errorMessage, scheduleLoading: false, scheduleFetched: true });
+      
+      // Kiểm tra nếu là lỗi 401 (hết phiên đăng nhập)
+      const is401Error = error && typeof error === 'object' && 'isAxiosError' in error && 
+                         (error as any).response?.status === 401;
+      
+      if (is401Error) {
+        // Tự động load lại lịch từ IDB khi hết phiên đăng nhập
+        try {
+          const scheduleByDate = await getScheduleFromIDB();
+          if (scheduleByDate) {
+            set({ scheduleByDate, scheduleLoading: false, scheduleFetched: true, hasScheduleInIDB: true, scheduleError: null });
+          } else {
+            set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true, hasScheduleInIDB: false, scheduleError: null });
+          }
+        } catch (idbError) {
+          console.error('Error loading schedule from IDB:', idbError);
+          set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true, hasScheduleInIDB: false, scheduleError: null });
+        }
+      } else {
+        // Các lỗi khác vẫn hiển thị thông báo
+        const errorMessage = getErrorMessage(error) || 'Không thể tải lịch học. Vui lòng thử lại.';
+        set({ scheduleError: errorMessage, scheduleLoading: false, scheduleFetched: true });
+      }
     }
   },
   loadScheduleFromIDB: async () => {
@@ -69,13 +92,13 @@ const useScheduleStore = create<ScheduleState>((set, get) => ({
     try {
       const scheduleByDate = await getScheduleFromIDB();
       if (scheduleByDate) {
-        set({ scheduleByDate, scheduleLoading: false, scheduleFetched: true });
+        set({ scheduleByDate, scheduleLoading: false, scheduleFetched: true, hasScheduleInIDB: true });
       } else {
-        set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true });
+        set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true, hasScheduleInIDB: false });
       }
     } catch (error) {
       console.error('Error loading schedule from IDB:', error);
-      set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true });
+      set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true, hasScheduleInIDB: false });
     }
   },
   useCurrentSchedule: async () => {
@@ -84,13 +107,13 @@ const useScheduleStore = create<ScheduleState>((set, get) => ({
     try {
       const scheduleByDate = await getScheduleFromIDB();
       if (scheduleByDate) {
-        set({ scheduleByDate, scheduleLoading: false, scheduleFetched: true });
+        set({ scheduleByDate, scheduleLoading: false, scheduleFetched: true, hasScheduleInIDB: true });
       } else {
-        set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true });
+        set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true, hasScheduleInIDB: false });
       }
     } catch (error) {
       console.error('Error loading schedule from IDB:', error);
-      set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true });
+      set({ scheduleByDate: [], scheduleLoading: false, scheduleFetched: true, hasScheduleInIDB: false });
     }
   },
   clearSchedule: () =>
@@ -99,6 +122,7 @@ const useScheduleStore = create<ScheduleState>((set, get) => ({
       scheduleLoading: false,
       scheduleError: null,
       scheduleFetched: false,
+      hasScheduleInIDB: false,
     }),
 }));
 
